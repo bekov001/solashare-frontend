@@ -41,10 +41,10 @@ export default function IssuerPage() {
   if (!user) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-24 text-center animate-fade-in">
-        <div className="w-16 h-16 rounded-2xl bg-surface-100 border border-surface-200/60 flex items-center justify-center mx-auto mb-6">
+        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-surface-100 border border-slate-200 dark:border-surface-200/60 flex items-center justify-center mx-auto mb-6">
           <BarChart2 className="w-8 h-8 text-sky-500" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-100 mb-3">Issuer Dashboard</h1>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-3">Issuer Dashboard</h1>
         <p className="text-slate-500 text-sm mb-8">Sign in as an issuer to manage your solar assets.</p>
         <button onClick={() => devSwitchRole("issuer")} className="btn-primary px-8">
           Demo Login as Issuer
@@ -68,7 +68,7 @@ export default function IssuerPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <p className="label-text mb-1">Issuer Dashboard</p>
-          <h1 className="text-3xl font-extrabold text-slate-100">My Assets</h1>
+          <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">My Assets</h1>
         </div>
         <Link href="/issuer/new" className="btn-primary">
           <Plus className="w-4 h-4" /> New Asset
@@ -92,7 +92,7 @@ export default function IssuerPage() {
 
       {/* Feedback message */}
       {msg && (
-        <div className="rounded-xl bg-sky-950/30 border border-sky-900/50 px-5 py-3 text-sm text-sky-300">
+        <div className="rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900/50 px-5 py-3 text-sm text-sky-700 dark:text-sky-300">
           {msg}
         </div>
       )}
@@ -121,11 +121,11 @@ export default function IssuerPage() {
               <div key={a.id} className="glass-card p-5">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-surface-100 border border-surface-200/40 flex items-center justify-center text-xl flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-surface-100 border border-slate-200 dark:border-surface-200/40 flex items-center justify-center text-xl flex-shrink-0">
                       {energy.emoji}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="font-bold text-slate-100 truncate">{a.title}</h3>
+                      <h3 className="font-bold text-slate-800 dark:text-slate-100 truncate">{a.title}</h3>
                       <p className="text-xs text-slate-500">
                         {energy.label} · {formatNumber(a.capacity_kw)} kW · {formatUSDC(a.price_per_share_usdc)}/share
                       </p>
@@ -141,7 +141,7 @@ export default function IssuerPage() {
 
                     <Link
                       href={`/issuer/assets/${a.id}`}
-                      className="btn-ghost text-xs px-3 py-2 border border-surface-200/60 rounded-lg"
+                      className="btn-ghost text-xs px-3 py-2 border border-slate-200 dark:border-surface-200/60 rounded-lg"
                     >
                       <ArrowUpRight className="w-3.5 h-3.5" /> Manage
                     </Link>

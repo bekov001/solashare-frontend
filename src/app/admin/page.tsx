@@ -65,10 +65,10 @@ export default function AdminPage() {
   if (!user) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-24 text-center animate-fade-in">
-        <div className="w-16 h-16 rounded-2xl bg-surface-100 border border-surface-200/60 flex items-center justify-center mx-auto mb-6">
+        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-surface-100 border border-slate-200 dark:border-surface-200/60 flex items-center justify-center mx-auto mb-6">
           <ShieldCheck className="w-8 h-8 text-amber-500" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-100 mb-3">Admin Panel</h1>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-3">Admin Panel</h1>
         <p className="text-slate-500 text-sm mb-8">Sign in as admin to manage the platform.</p>
         <button onClick={() => devSwitchRole("admin")} className="btn-primary px-8">
           Demo Login as Admin
@@ -93,19 +93,19 @@ export default function AdminPage() {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 animate-fade-in space-y-8">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-amber-950/40 border border-amber-800/60 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center">
           <ShieldCheck className="w-5 h-5 text-amber-400" />
         </div>
         <div>
           <p className="label-text">Platform Management</p>
-          <h1 className="text-2xl font-extrabold text-slate-100">Admin Panel</h1>
+          <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">Admin Panel</h1>
         </div>
       </div>
 
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total Assets",    val: assets.length,           color: "text-slate-200" },
+          { label: "Total Assets",    val: assets.length,           color: "text-slate-700 dark:text-slate-200" },
           { label: "Pending Review",  val: pending.length,          color: "text-amber-400" },
           { label: "Active Sale",     val: active.length,           color: "text-emerald-400" },
           { label: "Audit Events",    val: logs.length,             color: "text-sky-400" },
@@ -139,7 +139,7 @@ export default function AdminPage() {
 
       {/* Feedback */}
       {msg && (
-        <div className="rounded-xl bg-amber-950/30 border border-amber-900/50 px-5 py-3 text-sm text-amber-300">
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 px-5 py-3 text-sm text-amber-700 dark:text-amber-300">
           {msg}
         </div>
       )}
@@ -158,7 +158,7 @@ export default function AdminPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-xl">{energy.emoji}</span>
                       <div className="min-w-0">
-                        <p className="font-semibold text-slate-100 text-sm truncate">{a.title}</p>
+                        <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm truncate">{a.title}</p>
                         <p className="text-xs text-slate-500">{a.id}</p>
                       </div>
                     </div>
@@ -216,7 +216,7 @@ export default function AdminPage() {
         <div className="glass-card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-surface-200/40">
+              <tr className="border-b border-slate-100 dark:border-surface-200/40">
                 {["Timestamp", "Actor", "Entity", "Action"].map(h => (
                   <th key={h} className="text-left px-5 py-3.5 label-text">{h}</th>
                 ))}
@@ -238,7 +238,7 @@ export default function AdminPage() {
                   <td colSpan={4} className="px-5 py-10 text-center text-slate-600">No audit events.</td>
                 </tr>
               ) : logs.map(log => (
-                <tr key={log.id} className="border-b border-surface-200/20 hover:bg-white/[0.02]">
+                <tr key={log.id} className="border-b border-slate-50 dark:border-surface-200/20 hover:bg-slate-50 dark:hover:bg-white/[0.02]">
                   <td className="px-5 py-3.5 text-slate-500 text-xs font-mono whitespace-nowrap">
                     {formatDate(log.created_at)}
                   </td>
@@ -250,7 +250,7 @@ export default function AdminPage() {
                     <span className="text-xs text-slate-600"> · {log.entity_id.slice(0, 8)}…</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="px-2 py-1 rounded-md bg-surface-100/60 border border-surface-200/40 text-xs font-mono text-emerald-400">
+                    <span className="px-2 py-1 rounded-md bg-emerald-50 dark:bg-surface-100/60 border border-emerald-100 dark:border-surface-200/40 text-xs font-mono text-emerald-700 dark:text-emerald-400">
                       {log.action}
                     </span>
                   </td>

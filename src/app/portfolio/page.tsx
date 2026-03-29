@@ -47,10 +47,10 @@ export default function PortfolioPage() {
   if (!user) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-24 text-center animate-fade-in">
-        <div className="w-16 h-16 rounded-2xl bg-surface-100 border border-surface-200/60 flex items-center justify-center mx-auto mb-6">
+        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-surface-100 border border-slate-200 dark:border-surface-200/60 flex items-center justify-center mx-auto mb-6">
           <Wallet className="w-8 h-8 text-emerald-500" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-100 mb-3">Connect to view your portfolio</h1>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-3">Connect to view your portfolio</h1>
         <p className="text-slate-500 text-sm mb-8">Sign in through Telegram to see your positions, yield, and claims.</p>
         <button onClick={() => devSwitchRole("investor")} className="btn-primary px-8">
           Demo Login as Investor
@@ -68,7 +68,7 @@ export default function PortfolioPage() {
       {/* Header */}
       <div>
         <p className="label-text mb-1">My Portfolio</p>
-        <h1 className="text-3xl font-extrabold text-slate-100">Welcome back, {user.display_name}</h1>
+        <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">Welcome back, {user.display_name}</h1>
       </div>
 
       {/* Summary stats */}
@@ -121,7 +121,7 @@ export default function PortfolioPage() {
               <div key={pos.asset_id} className="glass-card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h3 className="font-bold text-slate-100 text-lg mb-1">{pos.title}</h3>
+                    <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg mb-1">{pos.title}</h3>
                     <div className="flex gap-4 text-sm text-slate-500">
                       <span>{formatNumber(pos.shares_amount)} shares</span>
                       <span>{formatPercent(pos.shares_percentage)} of total</span>
@@ -138,7 +138,7 @@ export default function PortfolioPage() {
 
                     <div className="flex gap-2">
                       <Link href={`/assets/${pos.asset_id}`}
-                            className="btn-ghost text-xs px-3 py-2 border border-surface-200/60 rounded-lg">
+                            className="btn-ghost text-xs px-3 py-2 border border-slate-200 dark:border-surface-200/60 rounded-lg">
                         <ArrowUpRight className="w-3.5 h-3.5" /> View
                       </Link>
 
@@ -176,7 +176,7 @@ export default function PortfolioPage() {
 
       {/* Claim message */}
       {msg && (
-        <div className="rounded-xl bg-emerald-950/30 border border-emerald-900/50 px-5 py-4 text-sm text-emerald-300">
+        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 px-5 py-4 text-sm text-emerald-700 dark:text-emerald-300">
           {msg}
         </div>
       )}
@@ -190,7 +190,7 @@ export default function PortfolioPage() {
           <div className="glass-card overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-surface-200/40">
+                <tr className="border-b border-slate-100 dark:border-surface-200/40">
                   {["Asset", "Amount", "Status", "Tx Signature"].map(h => (
                     <th key={h} className="text-left px-5 py-3.5 label-text">{h}</th>
                   ))}
@@ -198,13 +198,13 @@ export default function PortfolioPage() {
               </thead>
               <tbody>
                 {claims.map(c => (
-                  <tr key={c.claim_id} className="border-b border-surface-200/20 hover:bg-white/[0.02]">
+                  <tr key={c.claim_id} className="border-b border-slate-50 dark:border-surface-200/20 hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
                     <td className="px-5 py-4">
-                      <Link href={`/assets/${c.asset_id}`} className="text-slate-300 hover:text-emerald-400 transition-colors">
+                      <Link href={`/assets/${c.asset_id}`} className="text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
                         {c.asset_id}
                       </Link>
                     </td>
-                    <td className="px-5 py-4 text-emerald-400 font-semibold">{formatUSDC(c.claim_amount_usdc)}</td>
+                    <td className="px-5 py-4 text-emerald-700 dark:text-emerald-400 font-semibold">{formatUSDC(c.claim_amount_usdc)}</td>
                     <td className="px-5 py-4">
                       <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
                         c.status === "confirmed" ? "text-emerald-400" :
