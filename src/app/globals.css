@@ -4,15 +4,44 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    color-scheme: dark;
-  }
+/* ── Light theme (default) ───────────────────────────────────────────────── */
+:root {
+  --bg-base:      #f0fdf4;
+  --bg-surface:   #ffffff;
+  --bg-elevated:  #f4fbf6;
+  --bg-card:      rgba(255,255,255,0.85);
+  --border:       rgba(34, 197, 94, 0.18);
+  --border-hover: rgba(34, 197, 94, 0.45);
+  --text-primary: #0d2417;
+  --text-secondary: #166534;
+  --text-muted:   #4b7a5e;
+  --text-faint:   #9bbdaa;
+  --shadow-card:  0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(34,197,94,0.12);
+  --shadow-hover: 0 4px 20px rgba(0,0,0,0.10), 0 0 0 1px rgba(34,197,94,0.25);
+  --grid-color:   rgba(34,197,94,0.05);
+  --hero-glow:    rgba(34,197,94,0.12);
+}
 
-  * {
-    box-sizing: border-box;
-    border-color: rgba(26, 51, 38, 0.6);
-  }
+/* ── Dark theme ──────────────────────────────────────────────────────────── */
+.dark {
+  --bg-base:      #060c09;
+  --bg-surface:   #0b1a10;
+  --bg-elevated:  #122418;
+  --bg-card:      rgba(17, 31, 23, 0.85);
+  --border:       rgba(26, 51, 38, 0.7);
+  --border-hover: rgba(34, 197, 94, 0.25);
+  --text-primary: #e2f0e6;
+  --text-secondary: #86efac;
+  --text-muted:   #4ade80;
+  --text-faint:   #2d5c3f;
+  --shadow-card:  0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px rgba(26,51,38,0.6);
+  --shadow-hover: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(34,197,94,0.2), 0 0 30px rgba(34,197,94,0.06);
+  --grid-color:   rgba(34,197,94,0.03);
+  --hero-glow:    rgba(34,197,94,0.18);
+}
+
+@layer base {
+  * { box-sizing: border-box; }
 
   html {
     font-family: "Inter", system-ui, sans-serif;
@@ -21,38 +50,46 @@
   }
 
   body {
-    background-color: #060c09;
-    color: #e2f0e6;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
     min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   /* scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: #0b1a10;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #1a3326;
-    border-radius: 3px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #22c55e40;
-  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(34,197,94,0.3); }
 }
 
 @layer components {
+  /* ── Cards ── */
   .glass-card {
-    @apply rounded-2xl border bg-card-gradient backdrop-blur-sm shadow-card;
-    border-color: rgba(26, 51, 38, 0.7);
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card);
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
   }
 
   .glass-card-hover {
-    @apply glass-card transition-all duration-300 hover:shadow-card-hover hover:border-emerald-800/50;
+    @apply glass-card;
+  }
+  .glass-card-hover:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-hover);
   }
 
+  /* ── Background grid ── */
+  .bg-grid-pattern {
+    background-image:
+      linear-gradient(var(--grid-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  }
+
+  /* ── Buttons ── */
   .btn-primary {
     @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500
            text-white font-semibold text-sm transition-all duration-200
@@ -62,41 +99,80 @@
 
   .btn-secondary {
     @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl
-           border border-emerald-800/60 hover:border-emerald-600/60
-           bg-emerald-950/30 hover:bg-emerald-900/30
-           text-emerald-400 hover:text-emerald-300
            font-semibold text-sm transition-all duration-200
            active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+    border: 1px solid var(--border-hover);
+    color: var(--text-secondary);
+    background: transparent;
+  }
+  .btn-secondary:hover {
+    background: rgba(34,197,94,0.08);
+    border-color: rgba(34,197,94,0.5);
   }
 
   .btn-ghost {
     @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg
-           text-slate-400 hover:text-emerald-400 hover:bg-emerald-950/40
            font-medium text-sm transition-all duration-200;
+    color: var(--text-muted);
+  }
+  .btn-ghost:hover {
+    color: #22c55e;
+    background: rgba(34,197,94,0.08);
   }
 
+  /* ── Input ── */
   .input-field {
-    @apply w-full rounded-xl border border-surface-200 bg-surface-100/60 px-4 py-3
-           text-sm text-slate-200 placeholder:text-slate-600
-           focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700/50
-           transition-colors duration-200;
+    @apply w-full rounded-xl px-4 py-3 text-sm transition-colors duration-200
+           focus:outline-none focus:ring-1 focus:ring-emerald-700/50;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
   }
+  .input-field::placeholder { color: var(--text-faint); }
+  .input-field:focus { border-color: #15803d; }
 
-  .stat-card {
-    @apply glass-card p-5 flex flex-col gap-1;
-  }
-
-  .section-title {
-    @apply text-xl font-bold text-slate-100;
-  }
+  /* ── Misc ── */
+  .section-title { @apply text-xl font-bold; color: var(--text-primary); }
 
   .label-text {
-    @apply text-xs font-semibold uppercase tracking-widest text-slate-500;
+    @apply text-xs font-semibold uppercase tracking-widest;
+    color: var(--text-faint);
   }
 
   .yield-tag {
     @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-lg
-           text-amber-400 bg-amber-950/40 border border-amber-900/50
-           text-xs font-bold;
+           text-amber-500 dark:text-amber-400 text-xs font-bold;
+    background: rgba(245,158,11,0.10);
+    border: 1px solid rgba(245,158,11,0.25);
   }
+
+  /* ── Animations ── */
+  .animate-fade-in  { animation: fadeIn  0.4s ease-out; }
+  .animate-slide-up { animation: slideUp 0.4s ease-out; }
+  .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+  @keyframes fadeIn  { from { opacity: 0; }                                   to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(12px); }     to { opacity: 1; transform: translateY(0); } }
 }
+
+/* ── Light-mode: remap near-white Tailwind text to near-black ─────────────── */
+/* These are dark-first defaults used in JSX; in light mode they need to flip. */
+:root .text-slate-100 { color: #0f172a; }
+:root .text-slate-200 { color: #1e293b; }
+:root .text-slate-300 { color: #334155; }
+:root .text-slate-400 { color: #475569; }
+
+/* Surface backgrounds: in light mode the dark-green surfaces become light */
+:root .bg-surface-100\/50,
+:root .bg-surface-100\/40,
+:root .bg-surface-100\/60 { background-color: rgba(240,253,244,0.7) !important; }
+:root .bg-surface-200\/40,
+:root .bg-surface-200\/30,
+:root .bg-surface-200\/20 { background-color: rgba(220,245,228,0.5) !important; }
+
+/* Surface border color */
+:root .border-surface-200\/40,
+:root .border-surface-200\/60 { border-color: rgba(34,197,94,0.18) !important; }
+
+/* Footer/header bottom borders */
+:root .border-surface-200\/40 { border-color: rgba(34,197,94,0.15) !important; }
