@@ -10,10 +10,10 @@ import { Sun, TrendingUp, Shield, Zap, ArrowRight, Globe, Users, BarChart2 } fro
 
 // ─── Hero stats ───────────────────────────────────────────────────────────────
 const PLATFORM_STATS = [
-  { icon: <BarChart2 className="w-5 h-5 text-emerald-400" />, value: "$2.4M", label: "Total Assets" },
-  { icon: <Users className="w-5 h-5 text-emerald-400" />,    value: "1,240+", label: "Investors" },
-  { icon: <TrendingUp className="w-5 h-5 text-amber-400" />, value: "12.4%",  label: "Avg. APY" },
-  { icon: <Globe className="w-5 h-5 text-sky-400" />,        value: "8",       label: "Countries" },
+  { icon: <BarChart2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />, value: "$2.4M", label: "Total Assets" },
+  { icon: <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,    value: "1,240+", label: "Investors" },
+  { icon: <TrendingUp className="w-5 h-5 text-amber-500 dark:text-amber-400" />,   value: "12.4%",  label: "Avg. APY" },
+  { icon: <Globe className="w-5 h-5 text-sky-500 dark:text-sky-400" />,            value: "8",       label: "Countries" },
 ];
 
 const FEATURES = [
@@ -58,22 +58,25 @@ export default function HomePage() {
     <div className="animate-fade-in">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-20 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-800/60
-                        bg-emerald-950/40 text-emerald-400 text-xs font-semibold mb-8">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-slow" />
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border
+                        border-emerald-300 dark:border-emerald-800/60
+                        bg-emerald-50 dark:bg-emerald-950/40
+                        text-emerald-700 dark:text-emerald-400
+                        text-xs font-semibold mb-8">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse-slow" />
           Live on Solana Devnet
         </div>
 
         <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6 leading-[1.1]">
-          <span className="text-slate-100">Invest in </span>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-300">
+          <span className="text-slate-800 dark:text-slate-100">Invest in </span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-emerald-500 dark:from-emerald-400 dark:to-emerald-300">
             Solar Energy
           </span>
           <br />
-          <span className="text-slate-100">earn real yield</span>
+          <span className="text-slate-800 dark:text-slate-100">earn real yield</span>
         </h1>
 
-        <p className="text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-slate-500 dark:text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
           SolaShare tokenizes the revenue rights of real solar installations.
           Buy fractional shares, claim distributable income, and track everything on-chain.
         </p>
@@ -92,7 +95,7 @@ export default function HomePage() {
           {PLATFORM_STATS.map(s => (
             <div key={s.label} className="glass-card p-4 text-center">
               <div className="flex justify-center mb-2">{s.icon}</div>
-              <p className="text-2xl font-extrabold text-slate-100">{s.value}</p>
+              <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{s.value}</p>
               <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
             </div>
           ))}
@@ -137,7 +140,7 @@ export default function HomePage() {
                 {step.step}
               </div>
               <div className="text-3xl mb-4 mt-1">{step.icon}</div>
-              <h3 className="font-bold text-slate-100 mb-2">{step.title}</h3>
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-2">{step.title}</h3>
               <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
             </div>
           ))}
@@ -158,7 +161,7 @@ export default function HomePage() {
                 {f.icon}
               </div>
               <div>
-                <h3 className="font-bold text-slate-100 mb-1">{f.title}</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{f.title}</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">{f.desc}</p>
               </div>
             </div>
@@ -171,10 +174,10 @@ export default function HomePage() {
         <div className="glass-card p-10 text-center relative overflow-hidden">
           <div className="absolute inset-0 bg-hero-gradient opacity-50 pointer-events-none" />
           <div className="relative z-10">
-            <h2 className="text-3xl font-extrabold text-slate-100 mb-4">
+            <h2 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100 mb-4">
               Ready to earn green yield?
             </h2>
-            <p className="text-slate-400 mb-8 max-w-md mx-auto">
+            <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto">
               Connect your Telegram account and start investing in the future of clean energy.
             </p>
             <Link href="/assets" className="btn-primary text-base px-8 py-3.5">
