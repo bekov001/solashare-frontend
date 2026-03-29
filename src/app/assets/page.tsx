@@ -62,7 +62,7 @@ export default function AssetsPage() {
       {/* Header */}
       <div className="mb-8">
         <p className="label-text mb-1">Marketplace</p>
-        <h1 className="text-3xl font-extrabold text-slate-100">Explore Solar Assets</h1>
+        <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">Explore Solar Assets</h1>
         {pagination && (
           <p className="text-slate-500 text-sm mt-1">{pagination.total} assets found</p>
         )}
