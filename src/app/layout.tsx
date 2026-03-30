@@ -3,56 +3,44 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header } from "@/components/Header";
+import { Sidebar } from "@/components/Sidebar";
+import { BottomNav } from "@/components/BottomNav";
 
 export const metadata: Metadata = {
   title: "SolaShare — Solar RWA on Solana",
-  description:
-    "Invest in real-world solar energy assets through fractional ownership on Solana. Earn yield, claim revenue, and track your green portfolio.",
-  keywords: ["solar", "RWA", "Solana", "DeFi", "green energy", "tokenization"],
-  openGraph: {
-    title: "SolaShare",
-    description: "Fractional solar energy investments on Solana",
-    type: "website",
-  },
+  description: "Invest in real-world solar energy assets through fractional ownership on Solana. Earn yield, claim revenue, and track your green portfolio.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen antialiased transition-colors duration-300" suppressHydrationWarning>
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+          rel="stylesheet"
+        />
+      </head>
+      <body style={{ background: "var(--bg)" }} suppressHydrationWarning>
         <ThemeProvider>
           <AuthProvider>
-            {/* Ambient background */}
-            <div className="fixed inset-0 pointer-events-none" aria-hidden>
-              <div
-                className="absolute inset-0 bg-grid-pattern bg-[length:40px_40px]"
-              />
-              <div
-                className="absolute inset-0"
-                style={{
-                  background: "radial-gradient(ellipse 80% 60% at 50% -10%, var(--hero-glow) 0%, transparent 70%)",
-                }}
-              />
-            </div>
-
-            <div className="relative z-10 min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-
-              <footer
-                className="mt-20 py-8 px-6 border-t"
-                style={{ borderColor: "var(--border)" }}
-              >
-                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm"
-                     style={{ color: "var(--text-faint)" }}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-emerald-500 font-bold">SolaShare</span>
-                    <span>— Solar RWA on Solana</span>
-                  </div>
-                  <span>Built for Decentrathon 2026</span>
+            <Header />
+            <Sidebar />
+            <main className="lg:ml-64 pt-20 pb-24 lg:pb-8 min-h-screen">
+              {children}
+            </main>
+            <BottomNav />
+            <footer className="lg:ml-64 py-10 px-8 border-t" style={{ borderColor: "var(--border)" }}>
+              <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                <span className="text-xs font-bold opacity-40" style={{ color: "var(--text)" }}>
+                  © 2025 SolaShare. Powered by Solana.
+                </span>
+                <div className="flex gap-8">
+                  {["Documentation", "Privacy Policy", "Terms", "Discord"].map(l => (
+                    <a key={l} href="#" className="text-xs font-medium opacity-40 hover:opacity-100 hover:text-[#9945FF] transition-all" style={{ color: "var(--text)" }}>{l}</a>
+                  ))}
                 </div>
-              </footer>
-            </div>
+              </div>
+            </footer>
           </AuthProvider>
         </ThemeProvider>
       </body>

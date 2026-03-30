@@ -6,7 +6,7 @@ import { AssetCard, AssetCardSkeleton } from "@/components/AssetCard";
 import { EmptyState } from "@/components/EmptyState";
 import type { AssetFilters, AssetListItem, AssetStatus, EnergyType, Pagination } from "@/types";
 import { ENERGY_META, STATUS_META } from "@/lib/utils";
-import { Search, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const ENERGY_OPTIONS: { value: EnergyType | ""; label: string }[] = [
   { value: "", label: "All Types" },
@@ -24,17 +24,16 @@ const STATUS_OPTIONS: { value: AssetStatus | ""; label: string }[] = [
 ];
 
 const SORT_OPTIONS = [
-  { value: "newest",    label: "Newest" },
+  { value: "newest",     label: "Newest" },
   { value: "yield_desc", label: "Highest Yield" },
-  { value: "price_asc", label: "Lowest Price" },
+  { value: "price_asc",  label: "Lowest Price" },
 ];
 
 export default function AssetsPage() {
-  const [assets, setAssets]     = useState<AssetListItem[]>([]);
+  const [assets, setAssets]         = useState<AssetListItem[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [filters, setFilters]   = useState<AssetFilters>({ page: 1, limit: 12, sort: "newest" });
-  const [showFilters, setShowFilters] = useState(false);
+  const [loading, setLoading]       = useState(true);
+  const [filters, setFilters]       = useState<AssetFilters>({ page: 1, limit: 12, sort: "newest" });
 
   const fetchAssets = useCallback(async (f: AssetFilters) => {
     setLoading(true);
@@ -58,13 +57,13 @@ export default function AssetsPage() {
   const totalPages = pagination ? Math.ceil(pagination.total / (pagination.limit || 12)) : 1;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 animate-fade-in">
+    <div className="max-w-[1440px] mx-auto px-8 py-10 animate-fade-in">
       {/* Header */}
       <div className="mb-8">
-        <p className="label-text mb-1">Marketplace</p>
-        <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">Explore Solar Assets</h1>
+        <p className="label-xs mb-2">Marketplace</p>
+        <h1 className="text-4xl font-black" style={{ color: "var(--text)" }}>Explore Solar Assets</h1>
         {pagination && (
-          <p className="text-slate-500 text-sm mt-1">{pagination.total} assets found</p>
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{pagination.total} assets found</p>
         )}
       </div>
 
@@ -74,25 +73,34 @@ export default function AssetsPage() {
         <select
           value={filters.sort ?? "newest"}
           onChange={e => updateFilter({ sort: e.target.value as AssetFilters["sort"] })}
-          className="input-field w-auto text-xs py-2 px-3 rounded-lg"
+          className="input-new w-auto text-xs py-2 px-3 rounded-full"
         >
           {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
-        {/* Energy type */}
-        <select
-          value={filters.energy_type ?? ""}
-          onChange={e => updateFilter({ energy_type: (e.target.value as EnergyType) || undefined })}
-          className="input-field w-auto text-xs py-2 px-3 rounded-lg"
-        >
-          {ENERGY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        {/* Energy type pills */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {ENERGY_OPTIONS.map(o => (
+            <button
+              key={o.value}
+              onClick={() => updateFilter({ energy_type: (o.value as EnergyType) || undefined })}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+                (filters.energy_type ?? "") === o.value
+                  ? "bg-[#9945FF]/10 text-[#9945FF] border-[#9945FF]/20"
+                  : "border-[var(--border)] hover:border-[#9945FF]/20"
+              }`}
+              style={(filters.energy_type ?? "") === o.value ? {} : { color: "var(--text-muted)" }}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
 
         {/* Status */}
         <select
           value={filters.status ?? ""}
           onChange={e => updateFilter({ status: (e.target.value as AssetStatus) || undefined })}
-          className="input-field w-auto text-xs py-2 px-3 rounded-lg"
+          className="input-new w-auto text-xs py-2 px-3 rounded-full"
         >
           {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -101,16 +109,16 @@ export default function AssetsPage() {
         {(filters.energy_type || filters.status) && (
           <button
             onClick={() => setFilters({ page: 1, limit: 12, sort: "newest" })}
-            className="text-xs text-slate-500 hover:text-red-400 transition-colors px-2"
+            className="text-xs font-bold text-red-400 hover:text-red-500 transition-colors px-2"
           >
-            Clear filters ×
+            Clear ×
           </button>
         )}
       </div>
 
       {/* Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 9 }).map((_, i) => <AssetCardSkeleton key={i} />)}
         </div>
       ) : assets.length === 0 ? (
@@ -119,7 +127,7 @@ export default function AssetsPage() {
           description="Try adjusting your filters to see more results."
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {assets.map(a => <AssetCard key={a.id} asset={a} />)}
         </div>
       )}
@@ -130,7 +138,8 @@ export default function AssetsPage() {
           <button
             disabled={!pagination || pagination.page <= 1}
             onClick={() => setFilters(f => ({ ...f, page: (f.page ?? 1) - 1 }))}
-            className="p-2 rounded-lg border border-surface-200/60 hover:border-emerald-700/60 disabled:opacity-40 text-slate-400 hover:text-emerald-400 transition-colors"
+            className="p-2 rounded-full border disabled:opacity-40 transition-colors hover:border-[#9945FF]/40"
+            style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -139,11 +148,12 @@ export default function AssetsPage() {
             <button
               key={p}
               onClick={() => setFilters(f => ({ ...f, page: p }))}
-              className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${
+              className={`w-9 h-9 rounded-full text-sm font-bold transition-all ${
                 pagination?.page === p
-                  ? "bg-emerald-600 text-white"
-                  : "border border-surface-200/60 text-slate-400 hover:border-emerald-700/60 hover:text-emerald-400"
+                  ? "sol-gradient text-white"
+                  : "border hover:border-[#9945FF]/40"
               }`}
+              style={pagination?.page === p ? {} : { borderColor: "var(--border)", color: "var(--text-muted)" }}
             >
               {p}
             </button>
@@ -152,7 +162,8 @@ export default function AssetsPage() {
           <button
             disabled={!pagination || pagination.page >= totalPages}
             onClick={() => setFilters(f => ({ ...f, page: (f.page ?? 1) + 1 }))}
-            className="p-2 rounded-lg border border-surface-200/60 hover:border-emerald-700/60 disabled:opacity-40 text-slate-400 hover:text-emerald-400 transition-colors"
+            className="p-2 rounded-full border disabled:opacity-40 transition-colors hover:border-[#9945FF]/40"
+            style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
           >
             <ChevronRight className="w-4 h-4" />
           </button>

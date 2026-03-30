@@ -47,12 +47,12 @@ export default function PortfolioPage() {
   if (!user) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-24 text-center animate-fade-in">
-        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-surface-100 border border-slate-200 dark:border-surface-200/60 flex items-center justify-center mx-auto mb-6">
-          <Wallet className="w-8 h-8 text-emerald-500" />
+        <div className="w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-6 sol-gradient">
+          <Wallet className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-3">Connect to view your portfolio</h1>
-        <p className="text-slate-500 text-sm mb-8">Sign in through Telegram to see your positions, yield, and claims.</p>
-        <button onClick={() => devSwitchRole("investor")} className="btn-primary px-8">
+        <h1 className="text-3xl font-black mb-3" style={{ color: "var(--text)" }}>Connect to view your portfolio</h1>
+        <p className="text-sm mb-8" style={{ color: "var(--text-muted)" }}>Sign in through Telegram to see your positions, yield, and claims.</p>
+        <button onClick={() => devSwitchRole("investor")} className="btn-sol px-8">
           Demo Login as Investor
         </button>
       </div>
@@ -64,65 +64,65 @@ export default function PortfolioPage() {
   const p = portfolio!;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 animate-fade-in space-y-8">
+    <div className="max-w-[1440px] mx-auto px-8 py-10 animate-fade-in space-y-8">
       {/* Header */}
       <div>
-        <p className="label-text mb-1">My Portfolio</p>
-        <h1 className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">Welcome back, {user.display_name}</h1>
+        <p className="label-xs mb-2">My Portfolio</p>
+        <h1 className="text-4xl font-black" style={{ color: "var(--text)" }}>Welcome back, {user.display_name}</h1>
       </div>
 
       {/* Summary stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         {[
           {
-            icon: <CircleDollarSign className="w-5 h-5 text-emerald-400" />,
+            icon: <CircleDollarSign className="w-6 h-6 text-[#14F195]" />,
             label: "Total Invested",
             value: formatUSDC(p.total_invested_usdc),
             sub: "USDC principal",
-            color: "text-emerald-400",
+            color: "text-[#14F195]",
           },
           {
-            icon: <TrendingUp className="w-5 h-5 text-amber-400" />,
+            icon: <TrendingUp className="w-6 h-6 text-[#9945FF]" />,
             label: "Unclaimed Yield",
             value: formatUSDC(p.total_unclaimed_usdc),
             sub: "Ready to claim",
-            color: "text-amber-400",
+            color: "text-[#9945FF]",
           },
           {
-            icon: <CheckCircle2 className="w-5 h-5 text-sky-400" />,
+            icon: <CheckCircle2 className="w-6 h-6 text-[#00693e]" />,
             label: "Total Claimed",
             value: formatUSDC(p.total_claimed_usdc),
             sub: "Lifetime earnings",
-            color: "text-sky-400",
+            color: "text-[#00693e]",
           },
         ].map(s => (
-          <div key={s.label} className="glass-card p-6">
-            <div className="flex items-center gap-2 mb-3">
+          <div key={s.label} className="card p-6">
+            <div className="flex items-center gap-2 mb-4">
               {s.icon}
-              <span className="label-text">{s.label}</span>
+              <span className="label-xs">{s.label}</span>
             </div>
-            <p className={`text-3xl font-extrabold ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-slate-600 mt-1">{s.sub}</p>
+            <p className={`text-4xl font-black ${s.color}`}>{s.value}</p>
+            <p className="text-xs mt-1 font-medium" style={{ color: "var(--text-faint)" }}>{s.sub}</p>
           </div>
         ))}
       </div>
 
       {/* Positions */}
       <div>
-        <h2 className="section-title mb-4">Active Positions</h2>
+        <h2 className="text-2xl font-black mb-4" style={{ color: "var(--text)" }}>Active Positions</h2>
         {p.positions.length === 0 ? (
-          <div className="glass-card p-10 text-center text-slate-500">
-            <p className="mb-4">No positions yet.</p>
-            <Link href="/assets" className="btn-primary text-sm">Browse Assets</Link>
+          <div className="card p-10 text-center">
+            <p className="mb-4" style={{ color: "var(--text-muted)" }}>No positions yet.</p>
+            <Link href="/assets" className="btn-sol text-sm">Browse Assets</Link>
           </div>
         ) : (
           <div className="space-y-4">
             {p.positions.map(pos => (
-              <div key={pos.asset_id} className="glass-card p-5">
+              <div key={pos.asset_id} className="card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg mb-1">{pos.title}</h3>
-                    <div className="flex gap-4 text-sm text-slate-500">
+                    <h3 className="font-black text-lg mb-1" style={{ color: "var(--text)" }}>{pos.title}</h3>
+                    <div className="flex gap-4 text-sm" style={{ color: "var(--text-muted)" }}>
                       <span>{formatNumber(pos.shares_amount)} shares</span>
                       <span>{formatPercent(pos.shares_percentage)} of total</span>
                     </div>
@@ -131,14 +131,13 @@ export default function PortfolioPage() {
                   <div className="flex items-center gap-4">
                     {pos.unclaimed_usdc > 0 && (
                       <div className="text-right">
-                        <p className="text-amber-400 font-bold text-lg">{formatUSDC(pos.unclaimed_usdc)}</p>
-                        <p className="text-xs text-slate-500">Unclaimed</p>
+                        <p className="text-[#9945FF] font-black text-lg">{formatUSDC(pos.unclaimed_usdc)}</p>
+                        <p className="text-xs" style={{ color: "var(--text-faint)" }}>Unclaimed</p>
                       </div>
                     )}
 
                     <div className="flex gap-2">
-                      <Link href={`/assets/${pos.asset_id}`}
-                            className="btn-ghost text-xs px-3 py-2 border border-slate-200 dark:border-surface-200/60 rounded-lg">
+                      <Link href={`/assets/${pos.asset_id}`} className="btn-outline text-xs px-3 py-2">
                         <ArrowUpRight className="w-3.5 h-3.5" /> View
                       </Link>
 
@@ -146,7 +145,7 @@ export default function PortfolioPage() {
                         <button
                           onClick={() => handleClaim(pos.asset_id, "epoch-latest", pos.title)}
                           disabled={claiming === pos.asset_id}
-                          className="btn-primary text-xs px-4 py-2"
+                          className="btn-sol text-xs px-4 py-2"
                         >
                           {claiming === pos.asset_id ? (
                             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -161,9 +160,9 @@ export default function PortfolioPage() {
 
                 {/* Share bar */}
                 <div className="mt-4">
-                  <div className="h-1.5 rounded-full bg-surface-200/40 overflow-hidden">
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface-low)" }}>
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400"
+                      className="h-full rounded-full sol-gradient"
                       style={{ width: `${Math.min(pos.shares_percentage * 100, 100)}%` }}
                     />
                   </div>
@@ -176,39 +175,41 @@ export default function PortfolioPage() {
 
       {/* Claim message */}
       {msg && (
-        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 px-5 py-4 text-sm text-emerald-700 dark:text-emerald-300">
+        <div className="rounded-2xl px-5 py-4 text-sm font-medium" style={{ background: "var(--surface-low)", color: "var(--text)" }}>
           {msg}
         </div>
       )}
 
       {/* Claim history */}
       <div>
-        <h2 className="section-title mb-4">Claim History</h2>
+        <h2 className="text-2xl font-black mb-4" style={{ color: "var(--text)" }}>Claim History</h2>
         {claims.length === 0 ? (
-          <div className="glass-card p-8 text-center text-slate-500 text-sm">No claims yet.</div>
+          <div className="card p-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>No claims yet.</div>
         ) : (
-          <div className="glass-card overflow-hidden">
+          <div className="card overflow-hidden p-0">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-surface-200/40">
+                <tr className="border-b" style={{ borderColor: "var(--border)" }}>
                   {["Asset", "Amount", "Status", "Tx Signature"].map(h => (
-                    <th key={h} className="text-left px-5 py-3.5 label-text">{h}</th>
+                    <th key={h} className="text-left px-5 py-4 label-xs">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {claims.map(c => (
-                  <tr key={c.claim_id} className="border-b border-slate-50 dark:border-surface-200/20 hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
+                  <tr key={c.claim_id} className="border-b transition-colors hover:bg-[#9945FF]/5"
+                      style={{ borderColor: "var(--border)" }}>
                     <td className="px-5 py-4">
-                      <Link href={`/assets/${c.asset_id}`} className="text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                      <Link href={`/assets/${c.asset_id}`} className="font-medium hover:text-[#9945FF] transition-colors"
+                            style={{ color: "var(--text-muted)" }}>
                         {c.asset_id}
                       </Link>
                     </td>
-                    <td className="px-5 py-4 text-emerald-700 dark:text-emerald-400 font-semibold">{formatUSDC(c.claim_amount_usdc)}</td>
+                    <td className="px-5 py-4 font-black text-[#14F195]">{formatUSDC(c.claim_amount_usdc)}</td>
                     <td className="px-5 py-4">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
-                        c.status === "confirmed" ? "text-emerald-400" :
-                        c.status === "pending"   ? "text-amber-400" : "text-red-400"
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${
+                        c.status === "confirmed" ? "text-[#14F195]" :
+                        c.status === "pending"   ? "text-[#9945FF]" : "text-red-400"
                       }`}>
                         {c.status === "confirmed" ? <CheckCircle2 className="w-3 h-3" /> :
                          c.status === "pending"   ? <Clock className="w-3 h-3" /> :
@@ -216,7 +217,7 @@ export default function PortfolioPage() {
                         {c.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 font-mono text-xs text-slate-500">
+                    <td className="px-5 py-4 font-mono text-xs" style={{ color: "var(--text-faint)" }}>
                       {c.transaction_signature ? c.transaction_signature.slice(0, 12) + "…" : "—"}
                     </td>
                   </tr>
@@ -232,13 +233,13 @@ export default function PortfolioPage() {
 
 function PortfolioSkeleton() {
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10 space-y-8 animate-pulse">
-      <div className="h-8 bg-surface-200/40 rounded w-64" />
+    <div className="max-w-[1440px] mx-auto px-8 py-10 space-y-8 animate-pulse">
+      <div className="h-10 rounded-2xl w-64" style={{ background: "var(--surface-low)" }} />
       <div className="grid grid-cols-3 gap-5">
-        {[0,1,2].map(i => <div key={i} className="glass-card h-28" />)}
+        {[0,1,2].map(i => <div key={i} className="card h-28" />)}
       </div>
       <div className="space-y-4">
-        {[0,1,2].map(i => <div key={i} className="glass-card h-24" />)}
+        {[0,1,2].map(i => <div key={i} className="card h-24" />)}
       </div>
     </div>
   );

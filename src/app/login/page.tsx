@@ -5,29 +5,29 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { authApi } from "@/lib/api";
 import type { UserRole } from "@/types";
-import { Sun, Wallet, User, BarChart2, ShieldCheck } from "lucide-react";
+import { Wallet, User, BarChart2, ShieldCheck } from "lucide-react";
 
-const DEMO_ROLES: { role: UserRole; label: string; desc: string; icon: React.ReactNode; color: string }[] = [
+const DEMO_ROLES: { role: UserRole; label: string; desc: string; icon: React.ReactNode; accent: string }[] = [
   {
     role: "investor",
     label: "Demo Investor",
     desc: "Browse assets, invest, claim yield, view portfolio.",
     icon: <User className="w-5 h-5" />,
-    color: "border-emerald-800/60 hover:border-emerald-600/60 text-emerald-400",
+    accent: "#14F195",
   },
   {
     role: "issuer",
     label: "Demo Issuer",
     desc: "Create assets, post revenue, manage documents.",
     icon: <BarChart2 className="w-5 h-5" />,
-    color: "border-sky-800/60 hover:border-sky-600/60 text-sky-400",
+    accent: "#9945FF",
   },
   {
     role: "admin",
     label: "Demo Admin",
     desc: "Verify assets, freeze, close, review audit logs.",
     icon: <ShieldCheck className="w-5 h-5" />,
-    color: "border-amber-800/60 hover:border-amber-600/60 text-amber-400",
+    accent: "#00693e",
   },
 ];
 
@@ -47,7 +47,7 @@ export default function LoginPage() {
       const res = await authApi.telegram(telegramData);
       login(res.access_token, res.user);
       router.push("/");
-    } catch (err) {
+    } catch {
       setError("Invalid Telegram init data. Use demo login below for testing.");
     } finally {
       setTelegramLoading(false);
@@ -68,37 +68,37 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-600/20 border border-emerald-600/40 flex items-center justify-center mx-auto mb-4">
-            <Sun className="w-8 h-8 text-emerald-400" />
+          <div className="w-16 h-16 rounded-3xl sol-gradient flex items-center justify-center mx-auto mb-5 sol-glow">
+            <span className="material-symbols-outlined text-3xl text-white" style={{ fontVariationSettings: "'FILL' 1" }}>solar_power</span>
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-100">
-            Sign in to <span className="text-emerald-400">SolaShare</span>
+          <h1 className="text-3xl font-black mb-2" style={{ color: "var(--text)" }}>
+            Sign in to <span className="sol-text">SolaShare</span>
           </h1>
-          <p className="text-slate-500 text-sm mt-2">Solar RWA platform on Solana</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Solar RWA platform on Solana</p>
         </div>
 
         {/* Telegram auth */}
-        <div className="glass-card p-6">
+        <div className="card p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Wallet className="w-4 h-4 text-sky-400" />
-            <h2 className="font-semibold text-slate-200 text-sm">Telegram WebApp Auth</h2>
+            <Wallet className="w-4 h-4 text-[#9945FF]" />
+            <h2 className="font-bold text-sm" style={{ color: "var(--text)" }}>Telegram WebApp Auth</h2>
           </div>
           <form onSubmit={handleTelegramLogin} className="space-y-4">
             <div>
-              <label className="label-text block mb-2">Telegram Init Data</label>
+              <label className="label-xs block mb-2">Telegram Init Data</label>
               <textarea
                 rows={3}
-                className="input-field resize-none text-xs font-mono"
+                className="input-new resize-none text-xs font-mono"
                 placeholder="Paste your Telegram WebApp initData here…"
                 value={telegramData}
                 onChange={e => setTelegramData(e.target.value)}
               />
             </div>
-            {error && <p className="text-red-400 text-xs">{error}</p>}
+            {error && <p className="text-red-400 text-xs font-medium">{error}</p>}
             <button
               type="submit"
               disabled={!telegramData || telegramLoading}
-              className="btn-primary w-full justify-center text-sm"
+              className="btn-sol w-full text-sm"
             >
               {telegramLoading ? "Verifying…" : "Sign in with Telegram"}
             </button>
@@ -107,9 +107,9 @@ export default function LoginPage() {
 
         {/* Divider */}
         <div className="flex items-center gap-4">
-          <div className="flex-1 h-px bg-surface-200/40" />
-          <span className="text-xs text-slate-600">or use demo access</span>
-          <div className="flex-1 h-px bg-surface-200/40" />
+          <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+          <span className="text-xs font-medium" style={{ color: "var(--text-faint)" }}>or use demo access</span>
+          <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
         </div>
 
         {/* Demo logins */}
@@ -119,22 +119,24 @@ export default function LoginPage() {
               key={r.role}
               onClick={() => handleDemoLogin(r.role)}
               disabled={loading !== null}
-              className={`w-full flex items-center gap-4 p-4 rounded-xl border bg-surface-100/40 hover:bg-surface-100/70 transition-all text-left disabled:opacity-60 ${r.color}`}
+              className="w-full flex items-center gap-4 p-4 rounded-2xl border transition-all text-left disabled:opacity-60 hover:shadow-md"
+              style={{ background: "var(--surface)", borderColor: "var(--border)" }}
             >
-              <div className="w-10 h-10 rounded-xl bg-surface-200/40 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 text-white"
+                   style={{ background: r.accent }}>
                 {loading === r.role ? (
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : r.icon}
               </div>
               <div>
-                <p className="font-semibold text-sm">{r.label}</p>
-                <p className="text-xs text-slate-500">{r.desc}</p>
+                <p className="font-bold text-sm" style={{ color: "var(--text)" }}>{r.label}</p>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>{r.desc}</p>
               </div>
             </button>
           ))}
         </div>
 
-        <p className="text-center text-xs text-slate-600">
+        <p className="text-center text-xs" style={{ color: "var(--text-faint)" }}>
           Demo mode uses mock data. No real transactions are executed.
         </p>
       </div>

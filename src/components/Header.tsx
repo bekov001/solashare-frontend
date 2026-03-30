@@ -1,139 +1,81 @@
 "use client";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { ThemeToggle } from "./ThemeToggle";
-import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types";
-import { Menu, X, Sun, Wallet, LogOut, ChevronDown, ShieldCheck, BarChart3, User } from "lucide-react";
+import { ChevronDown, LogOut, Menu, X } from "lucide-react";
 
-const NAV_LINKS = [
-  { href: "/assets",    label: "Explore" },
-  { href: "/portfolio", label: "Portfolio", auth: true, roles: ["investor"] as UserRole[] },
-  { href: "/issuer",    label: "Issuer",    auth: true, roles: ["issuer"] as UserRole[] },
-  { href: "/admin",     label: "Admin",     auth: true, roles: ["admin"] as UserRole[] },
+const NAV = [
+  { href: "/assets",    label: "Marketplace" },
+  { href: "/portfolio", label: "My Assets",  role: "investor" as UserRole },
+  { href: "/issuer",    label: "Issuer",     role: "issuer" as UserRole },
+  { href: "/admin",     label: "Admin",      role: "admin" as UserRole },
 ];
-
-const ROLE_ICONS: Record<UserRole, React.ReactNode> = {
-  investor: <User className="w-3.5 h-3.5" />,
-  issuer:   <BarChart3 className="w-3.5 h-3.5" />,
-  admin:    <ShieldCheck className="w-3.5 h-3.5" />,
-};
-
-const ROLE_COLORS: Record<UserRole, string> = {
-  investor: "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60",
-  issuer:   "text-sky-700 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/60 border-sky-200 dark:border-sky-800/60",
-  admin:    "text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800/60",
-};
 
 export function Header() {
   const { user, logout, devSwitchRole } = useAuth();
-  const pathname   = usePathname();
-  const [open, setOpen]       = useState(false);
-  const [devMenu, setDevMenu] = useState(false);
+  const pathname = usePathname();
+  const [devOpen, setDevOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const visibleLinks = NAV_LINKS.filter(l => {
-    if (!l.auth) return true;
-    if (!user) return false;
-    if (l.roles && !l.roles.includes(user.role)) return false;
-    return true;
-  });
+  const links = NAV.filter(l => !l.role || user?.role === l.role);
 
   return (
-    <header className="sticky top-0 z-50 border-b transition-colors duration-300
-                       bg-white/80 dark:bg-[#060c09]/85 backdrop-blur-xl
-                       border-emerald-100 dark:border-emerald-950/60">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-xl transition-colors"
+            style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="flex items-center justify-between px-6 lg:px-8 h-16 max-w-[1440px] mx-auto">
+        {/* Logo — visible on mobile, hidden on desktop (sidebar shows it) */}
+        <Link href="/" className="text-xl font-bold sol-text lg:hidden">SolaShare</Link>
+        <div className="hidden lg:block" />
 
-        {/* ── Logo ── */}
-        <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors
-                          bg-emerald-100 dark:bg-emerald-600/20
-                          border border-emerald-300 dark:border-emerald-600/40
-                          group-hover:bg-emerald-200 dark:group-hover:bg-emerald-600/30">
-            <Sun className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <span className="font-extrabold text-lg tracking-tight">
-            <span className="text-emerald-600 dark:text-emerald-400">Sola</span>
-            <span className="text-slate-800 dark:text-slate-100">Share</span>
-          </span>
-        </Link>
-
-        {/* ── Desktop nav ── */}
-        <nav className="hidden md:flex items-center gap-1">
-          {visibleLinks.map(l => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                pathname.startsWith(l.href)
-                  ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5"
-              )}
-            >
-              {l.label}
-            </Link>
-          ))}
+        {/* Center nav (desktop) */}
+        <nav className="hidden md:flex items-center gap-8 text-sm font-semibold absolute left-1/2 -translate-x-1/2">
+          {links.map(l => {
+            const active = pathname.startsWith(l.href);
+            return (
+              <Link key={l.href} href={l.href}
+                    className={`pb-0.5 transition-colors ${active
+                      ? "text-[#2d2f2f] dark:text-white border-b-2 border-[#14F195]"
+                      : "text-gray-400 hover:text-[#2d2f2f] dark:hover:text-white"
+                    }`}>
+                {l.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* ── Right actions ── */}
+        {/* Right */}
         <div className="flex items-center gap-2">
-
-          {/* Theme toggle */}
           <ThemeToggle />
 
-          {/* Dev role switcher */}
+          {/* Dev switcher */}
           <div className="relative hidden sm:block">
-            <button
-              onClick={() => setDevMenu(!devMenu)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-                         border border-slate-200 dark:border-emerald-950/70
-                         text-slate-400 dark:text-slate-500
-                         hover:text-slate-600 dark:hover:text-slate-300
-                         hover:border-slate-300 dark:hover:border-emerald-900/60
-                         bg-transparent"
-            >
+            <button onClick={() => setDevOpen(!devOpen)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                    style={{ borderColor: "var(--border)", color: "var(--text-faint)" }}>
               Dev <ChevronDown className="w-3 h-3" />
             </button>
-
-            {devMenu && (
-              <div
-                className="absolute right-0 top-full mt-2 w-44 rounded-xl shadow-lg overflow-hidden z-50
-                           border border-slate-200 dark:border-emerald-950/60
-                           bg-white dark:bg-[#0d1a12]"
-                onMouseLeave={() => setDevMenu(false)}
-              >
-                <div className="px-3 py-2 border-b border-slate-100 dark:border-emerald-950/60">
-                  <p className="text-xs font-medium text-slate-400 dark:text-slate-600">Switch Demo Role</p>
+            {devOpen && (
+              <div className="absolute right-0 top-full mt-2 w-40 rounded-2xl shadow-xl z-50 border overflow-hidden"
+                   style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+                   onMouseLeave={() => setDevOpen(false)}>
+                <div className="px-3 py-2 border-b" style={{ borderColor: "var(--border)" }}>
+                  <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "var(--text-faint)" }}>Demo Role</p>
                 </div>
-                {(["investor", "issuer", "admin"] as UserRole[]).map(role => (
-                  <button
-                    key={role}
-                    onClick={() => { devSwitchRole(role); setDevMenu(false); }}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-3 py-2.5 text-sm transition-colors capitalize",
-                      "hover:bg-slate-50 dark:hover:bg-white/5",
-                      user?.role === role
-                        ? "text-emerald-700 dark:text-emerald-400"
-                        : "text-slate-600 dark:text-slate-400"
-                    )}
-                  >
-                    {ROLE_ICONS[role]} {role}
-                    {user?.role === role && (
-                      <span className="ml-auto text-xs text-emerald-500">active</span>
-                    )}
+                {(["investor","issuer","admin"] as UserRole[]).map(role => (
+                  <button key={role} onClick={() => { devSwitchRole(role); setDevOpen(false); }}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm capitalize hover:bg-[#9945FF]/5 transition-colors"
+                          style={{ color: user?.role === role ? "#9945FF" : "var(--text-muted)" }}>
+                    {role}
+                    {user?.role === role && <span className="ml-auto text-[10px] font-bold text-[#14F195]">●</span>}
                   </button>
                 ))}
                 {user && (
-                  <button
-                    onClick={() => { logout(); setDevMenu(false); }}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-500
-                               hover:bg-red-50 dark:hover:bg-red-950/20
-                               border-t border-slate-100 dark:border-emerald-950/60 transition-colors"
-                  >
+                  <button onClick={() => { logout(); setDevOpen(false); }}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 border-t transition-colors"
+                          style={{ borderColor: "var(--border)" }}>
                     <LogOut className="w-3.5 h-3.5" /> Logout
                   </button>
                 )}
@@ -141,63 +83,41 @@ export function Header() {
             )}
           </div>
 
-          {/* User / connect */}
+          {/* Avatar or connect */}
           {user ? (
-            <div className={cn(
-              "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold",
-              ROLE_COLORS[user.role]
-            )}>
-              {ROLE_ICONS[user.role]}
-              <span>{user.display_name}</span>
+            <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-sm">
+              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.display_name}`} alt="avatar" />
             </div>
           ) : (
-            <Link href="/login" className="hidden sm:flex btn-primary text-xs px-4 py-2">
-              <Wallet className="w-3.5 h-3.5" /> Connect
-            </Link>
+            <Link href="/login" className="btn-sol text-xs px-4 py-2">Connect</Link>
           )}
 
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
-            onClick={() => setOpen(!open)}
-          >
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          {/* Mobile burger */}
+          <button className="md:hidden p-1.5 rounded-lg" style={{ color: "var(--text-muted)" }}
+                  onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
-      {/* ── Mobile menu ── */}
-      {open && (
-        <div className="md:hidden border-t border-slate-100 dark:border-emerald-950/60
-                        bg-white dark:bg-[#060c09] px-4 py-4 space-y-1">
-          {visibleLinks.map(l => (
-            <Link
-              key={l.href}
-              href={l.href}
-              onClick={() => setOpen(false)}
-              className={cn(
-                "block px-4 py-3 rounded-xl text-sm font-medium transition-colors",
-                pathname.startsWith(l.href)
-                  ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5"
-              )}
-            >
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-t px-4 py-3 space-y-1" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+          {links.map(l => (
+            <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
+                  className={`block px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                    pathname.startsWith(l.href) ? "bg-[#9945FF]/5 text-[#9945FF] font-bold" : ""
+                  }`} style={pathname.startsWith(l.href) ? {} : { color: "var(--text-muted)" }}>
               {l.label}
             </Link>
           ))}
-          <div className="pt-2 border-t border-slate-100 dark:border-emerald-950/60 flex gap-2 flex-wrap">
-            {(["investor", "issuer", "admin"] as UserRole[]).map(role => (
-              <button
-                key={role}
-                onClick={() => { devSwitchRole(role); setOpen(false); }}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold capitalize transition-colors",
-                  user?.role === role
-                    ? ROLE_COLORS[role]
-                    : "text-slate-500 border-slate-200 dark:border-slate-700"
-                )}
-              >
-                {ROLE_ICONS[role]} {role}
+          <div className="pt-2 border-t flex gap-2 flex-wrap" style={{ borderColor: "var(--border)" }}>
+            {(["investor","issuer","admin"] as UserRole[]).map(role => (
+              <button key={role} onClick={() => { devSwitchRole(role); setMobileOpen(false); }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold capitalize border transition-colors ${
+                        user?.role === role ? "bg-[#9945FF]/5 text-[#9945FF] border-[#9945FF]/20" : "border-[var(--border)]"
+                      }`} style={user?.role === role ? {} : { color: "var(--text-faint)" }}>
+                {role}
               </button>
             ))}
           </div>
