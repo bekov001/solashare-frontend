@@ -39,13 +39,18 @@ export type TransactionKind =
 
 export interface AuthUser {
   id: string;
+  email: string;
   display_name: string;
   role: UserRole;
   wallet_address?: string;
+  auth_providers: string[];
 }
 
 export interface AuthResponse {
   access_token: string;
+  refresh_token: string;
+  token_type: "Bearer";
+  expires_in: number;
   user: AuthUser;
 }
 

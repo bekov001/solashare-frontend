@@ -54,9 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const devSwitchRole = useCallback((role: UserRole) => {
     const mock: AuthUser = {
-      id:           "dev-user-" + role,
-      display_name: role === "admin" ? "Admin User" : role === "issuer" ? "SolaShare Issuer" : "Demo Investor",
+      id:             "dev-user-" + role,
+      email:          role + "@dev.solashare",
+      display_name:   role === "admin" ? "Admin User" : role === "issuer" ? "SolaShare Issuer" : "Demo Investor",
       role,
+      auth_providers: ["password"],
     };
     const mockToken = "dev_token_" + role;
     login(mockToken, mock);

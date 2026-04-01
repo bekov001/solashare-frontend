@@ -11,6 +11,7 @@ import type {
   Pagination,
   Portfolio,
   RevenueEpoch,
+  TransactionKind,
   VerificationOutcome,
 } from "@/types";
 
@@ -46,11 +47,43 @@ async function request<T>(
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export const authApi = {
+  register: (email: string, password: string, display_name: string): Promise<AuthResponse> =>
+    request("/auth/register", { method: "POST", body: JSON.stringify({ email, password, display_name }) }),
+
+  login: (email: string, password: string): Promise<AuthResponse> =>
+    request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+
+  refresh: (refresh_token: string): Promise<AuthResponse> =>
+    request("/auth/refresh", { method: "POST", body: JSON.stringify({ refresh_token }) }),
+
+  logout: (refresh_token: string): Promise<{ success: boolean }> =>
+    request("/auth/logout", { method: "POST", body: JSON.stringify({ refresh_token }) }),
+
+  me: (): Promise<{ user: AuthResponse["user"] }> =>
+    request("/auth/me", {}, true),
+
+  googleUrl: (redirect_uri?: string, state?: string) => {
+    const params = new URLSearchParams();
+    if (redirect_uri) params.set("redirect_uri", redirect_uri);
+    if (state) params.set("state", state);
+    const qs = params.toString();
+    return request<{ authorization_url: string }>(`/auth/google/url${qs ? `?${qs}` : ""}`);
+  },
+
+  google: (code: string, redirect_uri: string): Promise<AuthResponse> =>
+    request("/auth/google", { method: "POST", body: JSON.stringify({ code, redirect_uri }) }),
+
+  telegramLogin: (data: {
+    id: string;
+    first_name: string;
+    username?: string;
+    auth_date: string;
+    hash: string;
+  }): Promise<AuthResponse> =>
+    request("/auth/telegram/login", { method: "POST", body: JSON.stringify(data) }),
+
   telegram: (telegram_init_data: string): Promise<AuthResponse> =>
-    request("/auth/telegram", {
-      method: "POST",
-      body: JSON.stringify({ telegram_init_data }),
-    }),
+    request("/auth/telegram", { method: "POST", body: JSON.stringify({ telegram_init_data }) }),
 
   linkWallet: (wallet_address: string, signed_message: string) =>
     request<{ success: boolean }>(
@@ -159,7 +192,7 @@ export const issuerApi = {
     ),
 
   postRevenue: (assetId: string, epochId: string) =>
-    request<{ success: boolean; transaction_payload: unknown; message: string }>(
+    request<{ success: boolean; operation_id: string; transaction_payload: unknown; message: string }>(
       `/issuer/assets/${assetId}/revenue-epochs/${epochId}/post`,
       { method: "POST" },
       true
@@ -181,23 +214,23 @@ export const investorApi = {
     ),
 
   prepare: (asset_id: string, amount_usdc: number) =>
-    request<{ success: boolean; signing_payload: unknown; message: string }>(
+    request<{ success: boolean; operation_id: string; signing_payload: unknown; message: string }>(
       "/investments/prepare",
       { method: "POST", body: JSON.stringify({ asset_id, amount_usdc }) },
       true
     ),
 
   prepareClaim: (asset_id: string, revenue_epoch_id: string) =>
-    request<{ success: boolean; signing_payload: unknown; message: string }>(
+    request<{ success: boolean; operation_id: string; signing_payload: unknown; message: string }>(
       "/claims/prepare",
       { method: "POST", body: JSON.stringify({ asset_id, revenue_epoch_id }) },
       true
     ),
 
-  confirmTransaction: (transaction_signature: string, kind: string) =>
+  confirmTransaction: (transaction_signature: string, kind: TransactionKind, operation_id?: string) =>
     request<{ success: boolean; sync_status: string }>(
       "/transactions/confirm",
-      { method: "POST", body: JSON.stringify({ transaction_signature, kind }) },
+      { method: "POST", body: JSON.stringify({ transaction_signature, kind, operation_id }) },
       true
     ),
 };
