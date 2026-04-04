@@ -22,7 +22,7 @@ const ASSET_IMAGES: Record<string, string> = {
 
 export function AssetCard({ asset }: { asset: AssetListItem }) {
   const energy = ENERGY_META[asset.energy_type];
-  const img = ASSET_IMAGES[asset.energy_type] ?? ASSET_IMAGES.other;
+  const img = asset.cover_image_url ?? ASSET_IMAGES[asset.energy_type] ?? ASSET_IMAGES.other;
 
   return (
     <Link

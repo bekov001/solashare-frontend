@@ -1,28 +1,32 @@
+import { clearSession, getStoredSession, storeSession } from "@/lib/session";
 import type {
+  AdminAssetItem,
+  AdminUserItem,
   AssetDetail,
   AssetDocument,
   AssetFilters,
   AssetListItem,
-  AdminUserItem,
   AuditLog,
   AuthResponse,
   Claim,
   HoldersSummary,
   InvestmentQuote,
-  KycRequestItem,
+  IssuerAssetDetail,
+  IssuerAssetListItem,
+  IssuerAssetReviewIssue,
   KycDocumentType,
   KycOverview,
+  KycRequestItem,
   Pagination,
   Portfolio,
-  PresignedUpload,
   PreparedTransactionResponse,
+  PresignedUpload,
   RevenueEpoch,
   TransactionKind,
   VerificationOutcome,
   WalletChallengeResponse,
   WalletVerifyResponse,
 } from "@/types";
-import { clearSession, getStoredSession, storeSession } from "@/lib/session";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 const V1 = `${BASE}/api/v1`;
@@ -70,7 +74,7 @@ async function request<T>(
   };
   if (auth) {
     const token = getToken();
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (token) headers.Authorization = `Bearer ${token}`;
   }
   const res = await fetch(`${V1}${path}`, { ...options, headers });
   if (!res.ok) {
@@ -82,9 +86,7 @@ async function request<T>(
       }
     }
 
-    const err = await res
-      .json()
-      .catch(() => ({ error: { message: res.statusText } }));
+    const err = await res.json().catch(() => ({ error: { message: res.statusText } }));
     throw new Error(err?.error?.message ?? `Request failed: ${res.status}`);
   }
   return res.json();
@@ -93,11 +95,7 @@ async function request<T>(
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export const authApi = {
-  register: (
-    email: string,
-    password: string,
-    display_name: string,
-  ): Promise<AuthResponse> =>
+  register: (email: string, password: string, display_name: string): Promise<AuthResponse> =>
     request("/auth/register", {
       method: "POST",
       body: JSON.stringify({ email, password, display_name }),
@@ -121,17 +119,14 @@ export const authApi = {
       body: JSON.stringify({ refresh_token }),
     }),
 
-  me: (): Promise<{ user: AuthResponse["user"] }> =>
-    request("/auth/me", {}, true),
+  me: (): Promise<{ user: AuthResponse["user"] }> => request("/auth/me", {}, true),
 
   googleUrl: (redirect_uri?: string, state?: string) => {
     const params = new URLSearchParams();
     if (redirect_uri) params.set("redirect_uri", redirect_uri);
     if (state) params.set("state", state);
     const qs = params.toString();
-    return request<{ authorization_url: string }>(
-      `/auth/google/url${qs ? `?${qs}` : ""}`,
-    );
+    return request<{ authorization_url: string }>(`/auth/google/url${qs ? `?${qs}` : ""}`);
   },
 
   google: (code: string, redirect_uri: string): Promise<AuthResponse> =>
@@ -209,14 +204,12 @@ export const assetsApi = {
 
   get: (id: string): Promise<AssetDetail> => request(`/assets/${id}`),
 
-  revenue: (id: string): Promise<{ items: RevenueEpoch[] }> =>
-    request(`/assets/${id}/revenue`),
+  revenue: (id: string): Promise<{ items: RevenueEpoch[] }> => request(`/assets/${id}/revenue`),
 
   documents: (id: string): Promise<{ items: AssetDocument[] }> =>
     request(`/assets/${id}/documents`),
 
-  holdersSummary: (id: string): Promise<HoldersSummary> =>
-    request(`/assets/${id}/holders-summary`),
+  holdersSummary: (id: string): Promise<HoldersSummary> => request(`/assets/${id}/holders-summary`),
 };
 
 // ─── Issuer ───────────────────────────────────────────────────────────────────
@@ -227,15 +220,28 @@ export const issuerApi = {
     short_description: string;
     full_description: string;
     energy_type: string;
+    cover_image_url?: string;
     location_country: string;
     location_city: string;
     capacity_kw: number;
   }): Promise<{ asset_id: string; status: string }> =>
-    request(
-      "/issuer/assets",
-      { method: "POST", body: JSON.stringify(data) },
+    request("/issuer/assets", { method: "POST", body: JSON.stringify(data) }, true),
+
+  listAssets: (params: { status?: string; page?: number; limit?: number } = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params)
+        .filter(([, value]) => value !== undefined && value !== "")
+        .map(([key, value]) => [key, String(value)]),
+    ).toString();
+
+    return request<{ items: IssuerAssetListItem[]; pagination: Pagination }>(
+      `/issuer/assets${qs ? `?${qs}` : ""}`,
+      {},
       true,
-    ),
+    );
+  },
+
+  getAsset: (id: string) => request<IssuerAssetDetail>(`/issuer/assets/${id}`, {}, true),
 
   updateAsset: (id: string, data: Record<string, unknown>) =>
     request<{ asset_id: string; status: string }>(
@@ -252,6 +258,8 @@ export const issuerApi = {
       storage_provider: string;
       storage_uri: string;
       content_hash: string;
+      mime_type?: string;
+      is_public?: boolean;
     },
   ) =>
     request<{ document_id: string; success: boolean }>(
@@ -264,10 +272,10 @@ export const issuerApi = {
     id: string,
     data: {
       valuation_usdc: number;
-      total_shares: number;
-      price_per_share_usdc: number;
       minimum_buy_amount_usdc: number;
-      target_raise_usdc: number;
+      total_shares?: number;
+      price_per_share_usdc?: number;
+      target_raise_usdc?: number;
     },
   ) =>
     request<{ success: boolean; asset_id: string }>(
@@ -309,18 +317,13 @@ export const issuerApi = {
       operation_id: string;
       transaction_payload: unknown;
       message: string;
-    }>(
-      `/issuer/assets/${assetId}/revenue-epochs/${epochId}/post`,
-      { method: "POST" },
-      true,
-    ),
+    }>(`/issuer/assets/${assetId}/revenue-epochs/${epochId}/post`, { method: "POST" }, true),
 };
 
 // ─── Investor ─────────────────────────────────────────────────────────────────
 
 export const investorApi = {
-  profile: (): Promise<{ user: AuthResponse["user"] }> =>
-    request("/me/profile", {}, true),
+  profile: (): Promise<{ user: AuthResponse["user"] }> => request("/me/profile", {}, true),
 
   kycOverview: (): Promise<KycOverview> => request("/me/kyc", {}, true),
 
@@ -415,7 +418,7 @@ export const investorApi = {
 
 export const uploadsApi = {
   presign: (
-    purpose: "kyc_document" | "avatar_image",
+    purpose: "kyc_document" | "avatar_image" | "asset_document",
     file_name: string,
     content_type: string,
     size_bytes: number,
@@ -438,6 +441,22 @@ export const uploadsApi = {
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
 export const adminApi = {
+  assets: (params: { status?: string; page?: number; limit?: number } = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params)
+        .filter(([, value]) => value !== undefined && value !== "")
+        .map(([key, value]) => [key, String(value)]),
+    ).toString();
+
+    return request<{ items: AdminAssetItem[]; pagination: Pagination }>(
+      `/admin/assets${qs ? `?${qs}` : ""}`,
+      {},
+      true,
+    );
+  },
+
+  getAsset: (id: string) => request<IssuerAssetDetail>(`/admin/assets/${id}`, {}, true),
+
   kycRequests: (
     params: {
       status?: "pending" | "in_review" | "approved" | "rejected" | "cancelled";
@@ -458,10 +477,15 @@ export const adminApi = {
     );
   },
 
-  verify: (id: string, outcome: VerificationOutcome, reason: string) =>
+  verify: (
+    id: string,
+    outcome: VerificationOutcome,
+    reason?: string,
+    issues?: IssuerAssetReviewIssue[],
+  ) =>
     request<{ success: boolean; asset_id: string; resulting_status: string }>(
       `/admin/assets/${id}/verify`,
-      { method: "POST", body: JSON.stringify({ outcome, reason }) },
+      { method: "POST", body: JSON.stringify({ outcome, reason, issues }) },
       true,
     ),
 
@@ -492,12 +516,7 @@ export const adminApi = {
     ),
 
   auditLogs: (
-    params: {
-      entity_type?: string;
-      entity_id?: string;
-      page?: number;
-      limit?: number;
-    } = {},
+    params: { entity_type?: string; entity_id?: string; page?: number; limit?: number } = {},
   ) => {
     const qs = new URLSearchParams(
       Object.entries(params)

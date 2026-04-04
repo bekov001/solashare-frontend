@@ -1,26 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { ArrowLeft, ExternalLink, FileText, Plus, RefreshCw, Send } from "lucide-react";
 import Link from "next/link";
-import { assetsApi, issuerApi } from "@/lib/api";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
-import { useAuth } from "@/lib/auth";
+import { FileDropInput } from "@/components/FileDropInput";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ENERGY_META, formatUSDC, formatNumber } from "@/lib/utils";
-import type { AssetDetail, RevenueEpoch } from "@/types";
-import { ArrowLeft, Send, Plus, RefreshCw, ExternalLink, FileText } from "lucide-react";
+import { assetsApi, issuerApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { uploadAssetDocument } from "@/lib/uploads";
+import { ENERGY_META, formatNumber, formatUSDC } from "@/lib/utils";
+import type { IssuerAssetDetail, RevenueEpoch } from "@/types";
 
 export default function ManageAssetPage() {
   const { id } = useParams<{ id: string }>();
   const { user, isLoading: authLoading } = useAuth();
-
-  const [asset, setAsset] = useState<AssetDetail | null>(null);
+  const [asset, setAsset] = useState<IssuerAssetDetail | null>(null);
   const [revenue, setRevenue] = useState<RevenueEpoch[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
-
   const [showEpoch, setShowEpoch] = useState(false);
   const [epoch, setEpoch] = useState({
     epoch_number: "1",
@@ -29,19 +29,21 @@ export default function ManageAssetPage() {
     gross_revenue_usdc: "",
     net_revenue_usdc: "",
     distributable_revenue_usdc: "",
-    report_uri: "",
-    report_hash: "",
     source_type: "operator_statement",
   });
+  const [reportFile, setReportFile] = useState<File | null>(null);
   const [savingEpoch, setSavingEpoch] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      return;
+    }
 
     setError("");
+    setLoading(true);
 
-    Promise.all([assetsApi.get(id), assetsApi.revenue(id).catch(() => ({ items: [] }))])
+    Promise.all([issuerApi.getAsset(id), assetsApi.revenue(id).catch(() => ({ items: [] }))])
       .then(([assetRes, revenueRes]) => {
         setAsset(assetRes);
         setRevenue(revenueRes.items);
@@ -54,7 +56,9 @@ export default function ManageAssetPage() {
   }, [id]);
 
   async function handleSubmit() {
-    if (!asset) return;
+    if (!asset) {
+      return;
+    }
 
     setSubmitting(true);
     setMsg("");
@@ -62,7 +66,8 @@ export default function ManageAssetPage() {
     try {
       const res = await issuerApi.submit(asset.id);
       setMsg(`Asset submitted → ${res.next_status}`);
-      setAsset((prev) => (prev ? { ...prev, status: res.next_status as AssetDetail["status"] } : null));
+      const refreshed = await issuerApi.getAsset(asset.id);
+      setAsset(refreshed);
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Failed to submit asset.");
     } finally {
@@ -70,28 +75,47 @@ export default function ManageAssetPage() {
     }
   }
 
-  async function handleCreateEpoch(e: React.FormEvent) {
-    e.preventDefault();
-    if (!asset) return;
+  async function handleCreateEpoch(event: React.FormEvent) {
+    event.preventDefault();
+
+    if (!asset) {
+      return;
+    }
 
     setSavingEpoch(true);
 
     try {
+      if (!reportFile) {
+        throw new Error("Attach a revenue report file before creating the epoch.");
+      }
+
+      const uploadedReport = await uploadAssetDocument(reportFile);
       const res = await issuerApi.createRevenueEpoch(asset.id, {
-        epoch_number: parseInt(epoch.epoch_number),
+        epoch_number: Number(epoch.epoch_number),
         period_start: epoch.period_start,
         period_end: epoch.period_end,
-        gross_revenue_usdc: parseFloat(epoch.gross_revenue_usdc),
-        net_revenue_usdc: parseFloat(epoch.net_revenue_usdc),
-        distributable_revenue_usdc: parseFloat(epoch.distributable_revenue_usdc),
-        report_uri: epoch.report_uri,
-        report_hash: epoch.report_hash,
+        gross_revenue_usdc: Number(epoch.gross_revenue_usdc),
+        net_revenue_usdc: Number(epoch.net_revenue_usdc),
+        distributable_revenue_usdc: Number(epoch.distributable_revenue_usdc),
+        report_uri: uploadedReport.file_url,
+        report_hash: uploadedReport.content_hash,
         source_type: epoch.source_type,
       });
 
       setMsg(`Revenue epoch ${res.revenue_epoch_id} created.`);
       setShowEpoch(false);
-      assetsApi.revenue(asset.id).then((r) => setRevenue(r.items)).catch(() => setRevenue([]));
+      setReportFile(null);
+      setEpoch({
+        epoch_number: String(Number(epoch.epoch_number) + 1),
+        period_start: "",
+        period_end: "",
+        gross_revenue_usdc: "",
+        net_revenue_usdc: "",
+        distributable_revenue_usdc: "",
+        source_type: "operator_statement",
+      });
+      const revenueRes = await assetsApi.revenue(asset.id).catch(() => ({ items: [] }));
+      setRevenue(revenueRes.items);
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Failed to create revenue epoch.");
     } finally {
@@ -103,7 +127,7 @@ export default function ManageAssetPage() {
     return (
       <div className="max-w-xl mx-auto px-6 py-24 text-center animate-fade-in">
         <p className="text-slate-500 mb-6">Sign in as an issuer to manage assets.</p>
-        <Link href="/login" className="btn-primary">
+        <Link href="/login" className="btn-sol px-8">
           Go to Login
         </Link>
       </div>
@@ -112,7 +136,10 @@ export default function ManageAssetPage() {
 
   if (user.role !== "issuer") {
     return (
-      <div className="max-w-xl mx-auto px-6 py-24 text-center" style={{ color: "var(--text-muted)" }}>
+      <div
+        className="max-w-xl mx-auto px-6 py-24 text-center"
+        style={{ color: "var(--text-muted)" }}
+      >
         Access restricted to issuers.
       </div>
     );
@@ -121,9 +148,8 @@ export default function ManageAssetPage() {
   if (authLoading || loading) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-10 space-y-5 animate-pulse">
-        <div className="h-5 bg-surface-200/40 rounded w-32" />
-        <div className="glass-card h-40" />
-        <div className="glass-card h-48" />
+        <div className="card h-32" />
+        <div className="card h-48" />
       </div>
     );
   }
@@ -138,92 +164,265 @@ export default function ManageAssetPage() {
 
   const energy = ENERGY_META[asset.energy_type];
   const canSubmit = asset.status === "draft" || asset.status === "verified";
+  const isSaleLive = asset.status === "active_sale" && asset.sale_terms?.sale_status === "live";
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 animate-fade-in space-y-7">
-      <Link href="/issuer" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-emerald-400 transition-colors">
+      <Link
+        href="/issuer"
+        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-emerald-400 transition-colors"
+      >
         <ArrowLeft className="w-4 h-4" /> Back to dashboard
       </Link>
 
-      <div className="glass-card p-6">
+      <div className="card p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-surface-100 border border-surface-200/60 flex items-center justify-center text-2xl">
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+              style={{ background: "var(--surface-low)" }}
+            >
               {energy.emoji}
             </div>
             <div>
-              <h1 className="text-xl font-extrabold text-slate-100">{asset.title}</h1>
-              <p className="text-sm text-slate-500">{asset.location.city}, {asset.location.country}</p>
+              <h1 className="text-xl font-black" style={{ color: "var(--text)" }}>
+                {asset.title}
+              </h1>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                {asset.location.city ?? "Location pending"}, {asset.location.country}
+              </p>
             </div>
           </div>
+
           <div className="flex items-center gap-3">
             <StatusBadge status={asset.status} />
+            <Link href={`/assets/${asset.id}`} className="btn-outline text-sm px-5">
+              <ExternalLink className="w-4 h-4" /> Public Page
+            </Link>
             {canSubmit && (
-              <button onClick={handleSubmit} disabled={submitting} className="btn-primary text-sm">
-                {submitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Submit</>}
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="btn-sol text-sm px-5"
+              >
+                {submitting ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" /> Submit
+                  </>
+                )}
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {msg && <div className="rounded-xl bg-sky-950/30 border border-sky-900/50 px-5 py-3 text-sm text-sky-300">{msg}</div>}
+      {msg && (
+        <div
+          className="rounded-2xl px-5 py-3 text-sm font-medium text-[#9945FF]"
+          style={{ background: "#9945FF10" }}
+        >
+          {msg}
+        </div>
+      )}
+
+      {asset.review_feedback && (
+        <div className="card p-6 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="label-xs mb-2">Review Feedback</p>
+              <h2 className="text-xl font-black" style={{ color: "var(--text)" }}>
+                Admin requested changes
+              </h2>
+            </div>
+            <span className="text-xs" style={{ color: "var(--text-faint)" }}>
+              {new Date(asset.review_feedback.created_at).toLocaleDateString()}
+            </span>
+          </div>
+
+          {asset.review_feedback.reason && (
+            <p className="text-sm leading-6" style={{ color: "var(--text-muted)" }}>
+              {asset.review_feedback.reason}
+            </p>
+          )}
+
+          {asset.review_feedback.issues.length > 0 && (
+            <div className="space-y-3">
+              {asset.review_feedback.issues.map((issue) => (
+                <div
+                  key={`${issue.field}-${issue.note}`}
+                  className="rounded-[1.25rem] border p-4"
+                  style={{
+                    borderColor: "rgba(245, 158, 11, 0.2)",
+                    background: "rgba(245, 158, 11, 0.06)",
+                  }}
+                >
+                  <p className="text-sm font-bold text-amber-300">{issue.label ?? issue.field}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-300">{issue.note}</p>
+                  {(issue.actual_value || issue.expected_value) && (
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 text-xs text-slate-400">
+                      <div>Submitted: {issue.actual_value ?? "n/a"}</div>
+                      <div>Expected: {issue.expected_value ?? "n/a"}</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <p className="label-xs">Investor CTA</p>
+            <h2 className="text-xl font-black" style={{ color: "var(--text)" }}>
+              {isSaleLive ? "Buying is live" : "Buying is hidden"}
+            </h2>
+            <p className="text-sm leading-6" style={{ color: "var(--text-muted)" }}>
+              The buy button is shown on the public asset page only when the asset status is
+              <span className="font-semibold text-[var(--text)]"> active_sale </span>
+              and sale status is
+              <span className="font-semibold text-[var(--text)]"> live</span>.
+            </p>
+            <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+              Current asset status: {asset.status}. Current sale status:{" "}
+              {asset.sale_terms?.sale_status ?? "not configured"}.
+            </p>
+          </div>
+
+          <Link href={`/assets/${asset.id}`} className="btn-outline text-sm">
+            <ExternalLink className="w-4 h-4" /> Open public asset page
+          </Link>
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Energy Type", val: energy.label },
           { label: "Capacity", val: `${formatNumber(asset.capacity_kw)} kW` },
-          { label: "Expected APY", val: asset.expected_annual_yield_percent === null ? "TBD" : `${asset.expected_annual_yield_percent}%` },
-          { label: "Revenue Epochs", val: String(asset.revenue_summary.total_epochs) },
-        ].map((s) => (
-          <div key={s.label} className="glass-card p-4 text-center">
-            <p className="text-slate-100 font-bold text-lg">{s.val}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
+          {
+            label: "Expected APY",
+            val:
+              asset.expected_annual_yield_percent === null
+                ? "TBD"
+                : `${asset.expected_annual_yield_percent}%`,
+          },
+          { label: "Revenue Epochs", val: String(revenue.length) },
+        ].map((item) => (
+          <div key={item.label} className="card p-4 text-center">
+            <p className="text-lg font-black" style={{ color: "var(--text)" }}>
+              {item.val}
+            </p>
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+              {item.label}
+            </p>
           </div>
         ))}
       </div>
 
-      <div className="glass-card p-6">
-        <h2 className="font-bold text-slate-100 mb-4">Sale Terms</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
-          {[
-            { label: "Valuation", val: formatUSDC(parseFloat(asset.sale_terms.valuation_usdc)) },
-            { label: "Total Shares", val: formatNumber(asset.sale_terms.total_shares) },
-            { label: "Price / Share", val: formatUSDC(parseFloat(asset.sale_terms.price_per_share_usdc)) },
-            { label: "Min. Buy", val: formatUSDC(parseFloat(asset.sale_terms.minimum_buy_amount_usdc)) },
-            { label: "Target Raise", val: formatUSDC(parseFloat(asset.sale_terms.target_raise_usdc)) },
-            { label: "Sale Status", val: asset.sale_terms.sale_status },
-          ].map((row) => (
-            <div key={row.label} className="flex justify-between border-b border-surface-200/30 pb-2">
-              <span className="text-slate-500">{row.label}</span>
-              <span className="text-slate-200 font-medium">{row.val}</span>
-            </div>
-          ))}
-        </div>
+      <div className="card p-6">
+        <h2 className="font-black mb-4" style={{ color: "var(--text)" }}>
+          Sale Terms
+        </h2>
+
+        {asset.sale_terms ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
+            {[
+              { label: "Valuation", val: formatUSDC(parseFloat(asset.sale_terms.valuation_usdc)) },
+              { label: "Total Shares", val: formatNumber(asset.sale_terms.total_shares) },
+              {
+                label: "Price / Share",
+                val: formatUSDC(parseFloat(asset.sale_terms.price_per_share_usdc)),
+              },
+              {
+                label: "Min. Buy",
+                val: formatUSDC(parseFloat(asset.sale_terms.minimum_buy_amount_usdc)),
+              },
+              {
+                label: "Target Raise",
+                val: formatUSDC(parseFloat(asset.sale_terms.target_raise_usdc)),
+              },
+              { label: "Sale Status", val: asset.sale_terms.sale_status },
+            ].map((row) => (
+              <div
+                key={row.label}
+                className="flex justify-between border-b pb-2"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <span style={{ color: "var(--text-muted)" }}>{row.label}</span>
+                <span className="font-medium" style={{ color: "var(--text)" }}>
+                  {row.val}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Sale terms have not been saved yet.
+          </p>
+        )}
       </div>
 
-      <div className="glass-card p-6">
+      <div className="card p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-bold text-slate-100">Revenue Epochs</h2>
-          <button onClick={() => setShowEpoch(!showEpoch)} className="btn-secondary text-xs">
+          <h2 className="font-black" style={{ color: "var(--text)" }}>
+            Revenue Epochs
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowEpoch(!showEpoch)}
+            className="btn-outline text-xs"
+          >
             <Plus className="w-3.5 h-3.5" /> New Epoch
           </button>
         </div>
 
         {showEpoch && (
-          <form onSubmit={handleCreateEpoch} className="mb-6 p-5 rounded-xl border border-emerald-900/50 bg-emerald-950/20 space-y-4">
-            <h3 className="font-semibold text-emerald-400 text-sm">New Revenue Epoch</h3>
+          <form
+            onSubmit={handleCreateEpoch}
+            className="mb-6 p-5 rounded-2xl space-y-4"
+            style={{ background: "var(--surface-low)" }}
+          >
+            <h3 className="font-semibold text-sm text-emerald-500">New Revenue Epoch</h3>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              Revenue reports are stored as files in S3. Manual report links and hashes are no
+              longer required here.
+            </p>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label-text block mb-1.5">Epoch #</label>
-                <input required type="number" min="1" className="input-field text-sm py-2" value={epoch.epoch_number} onChange={(e) => setEpoch((p) => ({ ...p, epoch_number: e.target.value }))} />
+                <label htmlFor="epoch-number" className="label-xs block mb-1.5">
+                  Epoch #
+                </label>
+                <input
+                  id="epoch-number"
+                  required
+                  type="number"
+                  min="1"
+                  className="input-new text-sm py-2"
+                  value={epoch.epoch_number}
+                  onChange={(event) =>
+                    setEpoch((current) => ({ ...current, epoch_number: event.target.value }))
+                  }
+                />
               </div>
               <div>
-                <label className="label-text block mb-1.5">Source Type</label>
-                <select className="input-field text-sm py-2" value={epoch.source_type} onChange={(e) => setEpoch((p) => ({ ...p, source_type: e.target.value }))}>
-                  {["manual_report", "meter_export", "operator_statement"].map((s) => (
-                    <option key={s} value={s}>
-                      {s.replace(/_/g, " ")}
+                <label htmlFor="epoch-source-type" className="label-xs block mb-1.5">
+                  Source Type
+                </label>
+                <select
+                  id="epoch-source-type"
+                  className="input-new text-sm py-2"
+                  value={epoch.source_type}
+                  onChange={(event) =>
+                    setEpoch((current) => ({ ...current, source_type: event.target.value }))
+                  }
+                >
+                  {["manual_report", "meter_export", "operator_statement"].map((source) => (
+                    <option key={source} value={source}>
+                      {source.replace(/_/g, " ")}
                     </option>
                   ))}
                 </select>
@@ -232,46 +431,83 @@ export default function ManageAssetPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label-text block mb-1.5">Period Start</label>
-                <input required type="date" className="input-field text-sm py-2" value={epoch.period_start} onChange={(e) => setEpoch((p) => ({ ...p, period_start: e.target.value }))} />
+                <label htmlFor="epoch-period-start" className="label-xs block mb-1.5">
+                  Period Start
+                </label>
+                <input
+                  id="epoch-period-start"
+                  required
+                  type="date"
+                  className="input-new text-sm py-2"
+                  value={epoch.period_start}
+                  onChange={(event) =>
+                    setEpoch((current) => ({ ...current, period_start: event.target.value }))
+                  }
+                />
               </div>
               <div>
-                <label className="label-text block mb-1.5">Period End</label>
-                <input required type="date" className="input-field text-sm py-2" value={epoch.period_end} onChange={(e) => setEpoch((p) => ({ ...p, period_end: e.target.value }))} />
+                <label htmlFor="epoch-period-end" className="label-xs block mb-1.5">
+                  Period End
+                </label>
+                <input
+                  id="epoch-period-end"
+                  required
+                  type="date"
+                  className="input-new text-sm py-2"
+                  value={epoch.period_end}
+                  onChange={(event) =>
+                    setEpoch((current) => ({ ...current, period_end: event.target.value }))
+                  }
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              {["gross_revenue_usdc", "net_revenue_usdc", "distributable_revenue_usdc"].map((field) => (
-                <div key={field}>
-                  <label className="label-text block mb-1.5">{field.replace(/_usdc|_/g, (s) => (s === "_usdc" ? "" : " ")).trim()}</label>
-                  <input
-                    required
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className="input-field text-sm py-2"
-                    placeholder="0.00"
-                    value={(epoch as Record<string, string>)[field]}
-                    onChange={(e) => setEpoch((p) => ({ ...p, [field]: e.target.value }))}
-                  />
-                </div>
-              ))}
+              {["gross_revenue_usdc", "net_revenue_usdc", "distributable_revenue_usdc"].map(
+                (field) => (
+                  <div key={field}>
+                    <label htmlFor={field} className="label-xs block mb-1.5">
+                      {field.replace(/_usdc|_/g, (value) => (value === "_usdc" ? "" : " ")).trim()}
+                    </label>
+                    <input
+                      id={field}
+                      required
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="input-new text-sm py-2"
+                      placeholder="0.00"
+                      value={(epoch as Record<string, string>)[field]}
+                      onChange={(event) =>
+                        setEpoch((current) => ({ ...current, [field]: event.target.value }))
+                      }
+                    />
+                  </div>
+                ),
+              )}
             </div>
 
             <div>
-              <label className="label-text block mb-1.5">Report URI</label>
-              <input className="input-field text-sm py-2" placeholder="https://arweave.net/..." value={epoch.report_uri} onChange={(e) => setEpoch((p) => ({ ...p, report_uri: e.target.value }))} />
-            </div>
-
-            <div>
-              <label className="label-text block mb-1.5">Report Hash</label>
-              <input className="input-field text-sm py-2" placeholder="sha256:..." value={epoch.report_hash} onChange={(e) => setEpoch((p) => ({ ...p, report_hash: e.target.value }))} />
+              <label className="label-xs mb-2 block">Revenue Report File</label>
+              <FileDropInput
+                accept=".pdf,.xlsx,.xls,.csv,image/png,image/jpeg,image/jpg"
+                buttonLabel="Attach report"
+                title="Drop the revenue report here"
+                selectedLabel={reportFile?.name ?? null}
+                description="PDF, spreadsheet, CSV or image. The file is uploaded to S3 and bound to this revenue epoch automatically."
+                onFilesSelected={(files) => setReportFile(files[0] ?? null)}
+              />
             </div>
 
             <div className="flex gap-3">
-              <button type="button" onClick={() => setShowEpoch(false)} className="btn-ghost text-sm">Cancel</button>
-              <button type="submit" disabled={savingEpoch} className="btn-primary text-sm">
+              <button
+                type="button"
+                onClick={() => setShowEpoch(false)}
+                className="btn-outline text-sm"
+              >
+                Cancel
+              </button>
+              <button type="submit" disabled={savingEpoch} className="btn-sol text-sm px-5">
                 {savingEpoch ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : "Create Epoch"}
               </button>
             </div>
@@ -279,18 +515,32 @@ export default function ManageAssetPage() {
         )}
 
         {revenue.length === 0 ? (
-          <p className="text-sm text-slate-500">No revenue epochs posted yet.</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            No revenue epochs posted yet.
+          </p>
         ) : (
           <div className="space-y-3">
-            {revenue.map((r) => (
-              <div key={r.id} className="flex items-center justify-between p-4 rounded-xl border border-surface-200/40">
+            {revenue.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between rounded-2xl border p-4"
+                style={{ borderColor: "var(--border)" }}
+              >
                 <div>
-                  <p className="text-sm font-semibold text-slate-200">Epoch #{r.epoch_number}</p>
-                  <p className="text-xs text-slate-500">{r.period_start} – {r.period_end}</p>
+                  <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+                    Epoch #{item.epoch_number}
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {item.period_start} – {item.period_end}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-amber-400 font-bold text-sm">{formatUSDC(r.distributable_revenue_usdc)}</p>
-                  <p className="text-xs text-slate-500">{r.posting_status}</p>
+                  <p className="font-bold text-sm text-amber-400">
+                    {formatUSDC(item.distributable_revenue_usdc)}
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {item.posting_status}
+                  </p>
                 </div>
               </div>
             ))}
@@ -298,24 +548,42 @@ export default function ManageAssetPage() {
         )}
       </div>
 
-      <div className="glass-card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-slate-100">Documents</h2>
-        </div>
-        {asset.public_documents.length === 0 ? (
-          <p className="text-sm text-slate-500">No documents uploaded.</p>
+      <div className="card p-6">
+        <h2 className="font-black mb-4" style={{ color: "var(--text)" }}>
+          Documents
+        </h2>
+
+        {asset.documents.length === 0 ? (
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            No documents uploaded.
+          </p>
         ) : (
           <div className="space-y-2">
-            {asset.public_documents.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between p-3 rounded-xl border border-surface-200/40">
+            {asset.documents.map((document) => (
+              <div
+                key={document.id}
+                className="flex items-center justify-between rounded-2xl border p-3"
+                style={{ borderColor: "var(--border)" }}
+              >
                 <div className="flex items-center gap-3">
                   <FileText className="w-4 h-4 text-emerald-500" />
                   <div>
-                    <p className="text-sm text-slate-200">{doc.title}</p>
-                    <p className="text-xs text-slate-500 capitalize">{doc.type.replace(/_/g, " ")} · {doc.storage_provider}</p>
+                    <p className="text-sm" style={{ color: "var(--text)" }}>
+                      {document.title}
+                    </p>
+                    <p className="text-xs capitalize" style={{ color: "var(--text-muted)" }}>
+                      {document.type.replace(/_/g, " ")} · {document.storage_provider} ·{" "}
+                      {document.is_public ? "public" : "private"}
+                    </p>
                   </div>
                 </div>
-                <a href={doc.storage_uri} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:bg-white/5 text-slate-500 hover:text-emerald-400">
+                <a
+                  href={document.storage_uri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 rounded-lg hover:bg-white/5"
+                  style={{ color: "var(--text-muted)" }}
+                >
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>

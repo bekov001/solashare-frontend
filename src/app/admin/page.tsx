@@ -1,21 +1,5 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { EmptyState } from "@/components/EmptyState";
-import { StatusBadge } from "@/components/StatusBadge";
-import { adminApi, assetsApi } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
-import { ENERGY_META, formatDate } from "@/lib/utils";
-import type {
-  AdminUserItem,
-  AssetListItem,
-  AuditLog,
-  KycRequestItem,
-  UserRole,
-  VerificationOutcome,
-} from "@/types";
 import {
   ArrowUpRight,
   BadgeCheck,
@@ -30,6 +14,23 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { EmptyState } from "@/components/EmptyState";
+import { StatusBadge } from "@/components/StatusBadge";
+import { adminApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { ENERGY_META, formatDate } from "@/lib/utils";
+import type {
+  AdminAssetItem,
+  AdminUserItem,
+  AuditLog,
+  IssuerAssetReviewIssue,
+  KycRequestItem,
+  UserRole,
+  VerificationOutcome,
+} from "@/types";
 
 type ActivePanel = "assets" | "users" | "kyc" | "audit";
 
@@ -39,10 +40,17 @@ type KycDialogState = {
   comment: string;
 } | null;
 
+type AssetReviewDialogState = {
+  asset: AdminAssetItem;
+  outcome: Exclude<VerificationOutcome, "approved">;
+  reason: string;
+  issues: IssuerAssetReviewIssue[];
+} | null;
+
 export default function AdminPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [panel, setPanel] = useState<ActivePanel>("assets");
-  const [assets, setAssets] = useState<AssetListItem[]>([]);
+  const [assets, setAssets] = useState<AdminAssetItem[]>([]);
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [roleDrafts, setRoleDrafts] = useState<Record<string, UserRole>>({});
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -56,6 +64,7 @@ export default function AdminPage() {
     alt: string;
   } | null>(null);
   const [kycDialog, setKycDialog] = useState<KycDialogState>(null);
+  const [assetReviewDialog, setAssetReviewDialog] = useState<AssetReviewDialogState>(null);
   const [userSearchInput, setUserSearchInput] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [newUser, setNewUser] = useState({
@@ -65,22 +74,13 @@ export default function AdminPage() {
     role: "investor" as UserRole,
   });
 
-  useEffect(() => {
-    if (!user || user.role !== "admin") {
-      setLoading(false);
-      return;
-    }
-
-    loadAdminData();
-  }, [user, userSearch]);
-
-  async function loadAdminData() {
+  const loadAdminData = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
       const [assetsRes, usersRes, logsRes, kycRes] = await Promise.all([
-        assetsApi.list({ limit: 50 }),
+        adminApi.assets({ limit: 100 }),
         adminApi.users({ limit: 100, search: userSearch || undefined }),
         adminApi.auditLogs({ limit: 20 }),
         adminApi.kycRequests({ limit: 20 }),
@@ -90,21 +90,26 @@ export default function AdminPage() {
       setUsers(usersRes.items);
       setLogs(logsRes.items);
       setKycRequests(kycRes.items);
-      setRoleDrafts(
-        Object.fromEntries(usersRes.items.map((item) => [item.id, item.role])),
-      );
+      setRoleDrafts(Object.fromEntries(usersRes.items.map((item) => [item.id, item.role])));
     } catch (err) {
       setAssets([]);
       setUsers([]);
       setLogs([]);
       setKycRequests([]);
-      setError(
-        err instanceof Error ? err.message : "Failed to load admin data.",
-      );
+      setError(err instanceof Error ? err.message : "Failed to load admin data.");
     } finally {
       setLoading(false);
     }
-  }
+  }, [userSearch]);
+
+  useEffect(() => {
+    if (!user || user.role !== "admin") {
+      setLoading(false);
+      return;
+    }
+
+    void loadAdminData();
+  }, [loadAdminData, user]);
 
   async function doAssetAction(
     assetId: string,
@@ -128,15 +133,44 @@ export default function AdminPage() {
       setMsg(`Asset ${assetId} → ${res.resulting_status}`);
       setAssets((prev) =>
         prev.map((a) =>
-          a.id === assetId
-            ? { ...a, status: res.resulting_status as AssetListItem["status"] }
-            : a,
+          a.id === assetId ? { ...a, status: res.resulting_status as AdminAssetItem["status"] } : a,
         ),
       );
     } catch (err) {
-      setMsg(
-        err instanceof Error ? err.message : `${label} failed for ${assetId}.`,
+      setMsg(err instanceof Error ? err.message : `${label} failed for ${assetId}.`);
+    } finally {
+      setAction(null);
+    }
+  }
+
+  async function submitAssetReviewDialog() {
+    if (!assetReviewDialog) {
+      return;
+    }
+
+    const { asset, outcome, reason, issues } = assetReviewDialog;
+    setAction(`verify-${asset.id}-${outcome}`);
+    setMsg("");
+
+    try {
+      const res = await adminApi.verify(
+        asset.id,
+        outcome,
+        reason.trim() || undefined,
+        issues.filter((issue) => issue.note.trim().length > 0),
       );
+
+      setMsg(`Asset ${asset.title} → ${res.resulting_status}`);
+      setAssets((prev) =>
+        prev.map((item) =>
+          item.id === asset.id
+            ? { ...item, status: res.resulting_status as AdminAssetItem["status"] }
+            : item,
+        ),
+      );
+      setAssetReviewDialog(null);
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : `Review failed for ${asset.title}.`);
     } finally {
       setAction(null);
     }
@@ -150,16 +184,11 @@ export default function AdminPage() {
       const res = await adminApi.reviewKyc(request.user_id, "approved");
       setMsg(`KYC for ${request.display_name} → ${res.kyc_status}`);
       setKycRequests((prev) =>
-        prev.filter(
-          (item) =>
-            item.verification_request_id !== request.verification_request_id,
-        ),
+        prev.filter((item) => item.verification_request_id !== request.verification_request_id),
       );
     } catch (err) {
       setMsg(
-        err instanceof Error
-          ? err.message
-          : `Failed to review KYC for ${request.display_name}.`,
+        err instanceof Error ? err.message : `Failed to review KYC for ${request.display_name}.`,
       );
     } finally {
       setAction(null);
@@ -176,24 +205,15 @@ export default function AdminPage() {
     setMsg("");
 
     try {
-      const res = await adminApi.reviewKyc(
-        request.user_id,
-        outcome,
-        comment.trim() || undefined,
-      );
+      const res = await adminApi.reviewKyc(request.user_id, outcome, comment.trim() || undefined);
       setMsg(`KYC for ${request.display_name} → ${res.kyc_status}`);
       setKycRequests((prev) =>
-        prev.filter(
-          (item) =>
-            item.verification_request_id !== request.verification_request_id,
-        ),
+        prev.filter((item) => item.verification_request_id !== request.verification_request_id),
       );
       setKycDialog(null);
     } catch (err) {
       setMsg(
-        err instanceof Error
-          ? err.message
-          : `Failed to review KYC for ${request.display_name}.`,
+        err instanceof Error ? err.message : `Failed to review KYC for ${request.display_name}.`,
       );
     } finally {
       setAction(null);
@@ -239,15 +259,11 @@ export default function AdminPage() {
         `Admin updated role from ${userItem.role} to ${nextRole}`,
       );
       setUsers((prev) =>
-        prev.map((item) =>
-          item.id === userItem.id ? { ...item, role: nextRole } : item,
-        ),
+        prev.map((item) => (item.id === userItem.id ? { ...item, role: nextRole } : item)),
       );
       setMsg(`${userItem.display_name} → ${nextRole}`);
     } catch (err) {
-      setMsg(
-        err instanceof Error ? err.message : "Failed to update user role.",
-      );
+      setMsg(err instanceof Error ? err.message : "Failed to update user role.");
       setRoleDrafts((prev) => ({ ...prev, [userItem.id]: userItem.role }));
     } finally {
       setAction(null);
@@ -255,9 +271,7 @@ export default function AdminPage() {
   }
 
   async function deleteUserAccount(userItem: AdminUserItem) {
-    if (
-      !window.confirm(`Delete ${userItem.display_name}? This cannot be undone.`)
-    ) {
+    if (!window.confirm(`Delete ${userItem.display_name}? This cannot be undone.`)) {
       return;
     }
 
@@ -284,10 +298,7 @@ export default function AdminPage() {
         >
           <ShieldCheck className="w-8 h-8 text-[#9945FF]" />
         </div>
-        <h1
-          className="text-3xl font-black mb-3"
-          style={{ color: "var(--text)" }}
-        >
+        <h1 className="text-3xl font-black mb-3" style={{ color: "var(--text)" }}>
           Admin Panel
         </h1>
         <p className="text-sm mb-8" style={{ color: "var(--text-muted)" }}>
@@ -320,7 +331,6 @@ export default function AdminPage() {
   }
 
   const pending = assets.filter((a) => a.status === "pending_review");
-  const active = assets.filter((a) => a.status === "active_sale");
 
   return (
     <>
@@ -429,102 +439,137 @@ export default function AdminPage() {
 
         {panel === "assets" && (
           <div className="space-y-3">
-            {loading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div key={`asset-skeleton-${i}`} className="card h-20 animate-pulse" />
-              ))
-            ) : (
-              assets.map((a) => {
-                const energy = ENERGY_META[a.energy_type];
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={`asset-skeleton-${i}`} className="card h-20 animate-pulse" />
+                ))
+              : assets.map((a) => {
+                  const energy = ENERGY_META[a.energy_type];
 
-                return (
-                  <div key={a.id} className="card p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-xl">{energy.emoji}</span>
-                        <div className="min-w-0">
-                          <p
-                            className="font-black text-sm truncate"
-                            style={{ color: "var(--text)" }}
+                  return (
+                    <div key={a.id} className="card p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-xl">{energy.emoji}</span>
+                          <div className="min-w-0">
+                            <p
+                              className="font-black text-sm truncate"
+                              style={{ color: "var(--text)" }}
+                            >
+                              {a.title}
+                            </p>
+                            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                              {a.issuer_display_name} · {a.location_city ?? "City pending"},{" "}
+                              {a.location_country}
+                            </p>
+                            <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+                              {a.id}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <StatusBadge status={a.status} />
+
+                          <Link
+                            href={`/assets/${a.id}`}
+                            className="p-1.5 rounded-xl transition-colors hover:bg-[#9945FF]/5"
+                            style={{ color: "var(--text-muted)" }}
                           >
-                            {a.title}
-                          </p>
-                          <p
-                            className="text-xs"
-                            style={{ color: "var(--text-faint)" }}
-                          >
-                            {a.id}
-                          </p>
+                            <ArrowUpRight className="w-4 h-4" />
+                          </Link>
+
+                          {a.status === "pending_review" && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => doAssetAction(a.id, "verify", "Approve")}
+                                disabled={action === `verify-${a.id}`}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 text-[#14F195] hover:bg-[#14F195]/10"
+                                style={{ background: "#14F19510" }}
+                              >
+                                {action === `verify-${a.id}` ? (
+                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="w-3 h-3" />
+                                )}
+                                Approve
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAssetReviewDialog({
+                                    asset: a,
+                                    outcome: "needs_changes",
+                                    reason: "",
+                                    issues: [{ field: "valuation_usdc", note: "" }],
+                                  })
+                                }
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-amber-400 hover:bg-amber-400/10"
+                                style={{ background: "rgba(251,191,36,0.12)" }}
+                              >
+                                <X className="w-3 h-3" />
+                                Request changes
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAssetReviewDialog({
+                                    asset: a,
+                                    outcome: "rejected",
+                                    reason: "",
+                                    issues: [{ field: "other", note: "" }],
+                                  })
+                                }
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-red-400 hover:bg-red-400/10"
+                                style={{ background: "rgba(248,113,113,0.1)" }}
+                              >
+                                <XCircle className="w-3 h-3" />
+                                Reject
+                              </button>
+                            </>
+                          )}
+
+                          {!["frozen", "closed", "draft"].includes(a.status) && (
+                            <button
+                              type="button"
+                              onClick={() => doAssetAction(a.id, "freeze", "Freeze")}
+                              disabled={action === `freeze-${a.id}`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 text-sky-500 hover:bg-sky-500/10"
+                              style={{ background: "rgba(14,165,233,0.1)" }}
+                            >
+                              {action === `freeze-${a.id}` ? (
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Snowflake className="w-3 h-3" />
+                              )}
+                              Freeze
+                            </button>
+                          )}
+
+                          {a.status === "frozen" && (
+                            <button
+                              type="button"
+                              onClick={() => doAssetAction(a.id, "close", "Close")}
+                              disabled={action === `close-${a.id}`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 text-red-400 hover:bg-red-400/10"
+                              style={{ background: "rgba(248,113,113,0.1)" }}
+                            >
+                              {action === `close-${a.id}` ? (
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <XCircle className="w-3 h-3" />
+                              )}
+                              Close
+                            </button>
+                          )}
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <StatusBadge status={a.status} />
-
-                        <Link
-                          href={`/assets/${a.id}`}
-                          className="p-1.5 rounded-xl transition-colors hover:bg-[#9945FF]/5"
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          <ArrowUpRight className="w-4 h-4" />
-                        </Link>
-
-                        {a.status === "pending_review" && (
-                          <button
-                            type="button"
-                            onClick={() => doAssetAction(a.id, "verify", "Verify")}
-                            disabled={action === `verify-${a.id}`}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 text-[#14F195] hover:bg-[#14F195]/10"
-                            style={{ background: "#14F19510" }}
-                          >
-                            {action === `verify-${a.id}` ? (
-                              <RefreshCw className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <CheckCircle2 className="w-3 h-3" />
-                            )}
-                            Verify
-                          </button>
-                        )}
-
-                        {!["frozen", "closed", "draft"].includes(a.status) && (
-                          <button
-                            type="button"
-                            onClick={() => doAssetAction(a.id, "freeze", "Freeze")}
-                            disabled={action === `freeze-${a.id}`}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 text-sky-500 hover:bg-sky-500/10"
-                            style={{ background: "rgba(14,165,233,0.1)" }}
-                          >
-                            {action === `freeze-${a.id}` ? (
-                              <RefreshCw className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <Snowflake className="w-3 h-3" />
-                            )}
-                            Freeze
-                          </button>
-                        )}
-
-                        {a.status === "frozen" && (
-                          <button
-                            type="button"
-                            onClick={() => doAssetAction(a.id, "close", "Close")}
-                            disabled={action === `close-${a.id}`}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 text-red-400 hover:bg-red-400/10"
-                            style={{ background: "rgba(248,113,113,0.1)" }}
-                          >
-                            {action === `close-${a.id}` ? (
-                              <RefreshCw className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <XCircle className="w-3 h-3" />
-                            )}
-                            Close
-                          </button>
-                        )}
-                      </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })}
           </div>
         )}
 
@@ -539,8 +584,11 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="label-xs mb-2 block">Display name</label>
+                <label htmlFor="new-user-display-name" className="label-xs mb-2 block">
+                  Display name
+                </label>
                 <input
+                  id="new-user-display-name"
                   className="input-new"
                   value={newUser.display_name}
                   onChange={(e) =>
@@ -553,20 +601,24 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="label-xs mb-2 block">Email</label>
+                <label htmlFor="new-user-email" className="label-xs mb-2 block">
+                  Email
+                </label>
                 <input
+                  id="new-user-email"
                   type="email"
                   className="input-new"
                   value={newUser.email}
-                  onChange={(e) =>
-                    setNewUser((prev) => ({ ...prev, email: e.target.value }))
-                  }
+                  onChange={(e) => setNewUser((prev) => ({ ...prev, email: e.target.value }))}
                 />
               </div>
 
               <div>
-                <label className="label-xs mb-2 block">Temporary password</label>
+                <label htmlFor="new-user-password" className="label-xs mb-2 block">
+                  Temporary password
+                </label>
                 <input
+                  id="new-user-password"
                   type="password"
                   className="input-new"
                   value={newUser.password}
@@ -580,8 +632,11 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="label-xs mb-2 block">Role</label>
+                <label htmlFor="new-user-role" className="label-xs mb-2 block">
+                  Role
+                </label>
                 <select
+                  id="new-user-role"
                   className="input-new"
                   value={newUser.role}
                   onChange={(e) =>
@@ -655,33 +710,19 @@ export default function AdminPage() {
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="space-y-2">
                         <div>
-                          <p
-                            className="font-black text-sm"
-                            style={{ color: "var(--text)" }}
-                          >
+                          <p className="font-black text-sm" style={{ color: "var(--text)" }}>
                             {item.display_name}
                           </p>
-                          <p
-                            className="text-xs"
-                            style={{ color: "var(--text-faint)" }}
-                          >
+                          <p className="text-xs" style={{ color: "var(--text-faint)" }}>
                             {item.email ?? item.id}
                           </p>
                         </div>
-                        <div
-                          className="text-xs"
-                          style={{ color: "var(--text-muted)" }}
-                        >
+                        <div className="text-xs" style={{ color: "var(--text-muted)" }}>
                           Created {formatDate(item.created_at)} · KYC {item.kyc_status}
                         </div>
-                        <div
-                          className="text-xs"
-                          style={{ color: "var(--text-faint)" }}
-                        >
+                        <div className="text-xs" style={{ color: "var(--text-faint)" }}>
                           Providers:{" "}
-                          {item.auth_providers.length > 0
-                            ? item.auth_providers.join(", ")
-                            : "none"}
+                          {item.auth_providers.length > 0 ? item.auth_providers.join(", ") : "none"}
                         </div>
                       </div>
 
@@ -799,10 +840,7 @@ export default function AdminPage() {
                             ) : (
                               <div className="flex h-full items-center justify-center px-6 text-center">
                                 <div>
-                                  <p
-                                    className="text-sm font-bold"
-                                    style={{ color: "var(--text)" }}
-                                  >
+                                  <p className="text-sm font-bold" style={{ color: "var(--text)" }}>
                                     Preview unavailable
                                   </p>
                                   <p
@@ -830,16 +868,10 @@ export default function AdminPage() {
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="space-y-2">
                           <div>
-                            <p
-                              className="font-black text-sm"
-                              style={{ color: "var(--text)" }}
-                            >
+                            <p className="font-black text-sm" style={{ color: "var(--text)" }}>
                               {request.display_name}
                             </p>
-                            <p
-                              className="text-xs"
-                              style={{ color: "var(--text-faint)" }}
-                            >
+                            <p className="text-xs" style={{ color: "var(--text-faint)" }}>
                               {request.email ?? request.user_id}
                             </p>
                           </div>
@@ -847,15 +879,10 @@ export default function AdminPage() {
                             className="text-xs font-medium"
                             style={{ color: "var(--text-muted)" }}
                           >
-                            {request.document_type === "passport"
-                              ? "Passport"
-                              : "National ID"}{" "}
-                            · {request.document_name}
+                            {request.document_type === "passport" ? "Passport" : "National ID"} ·{" "}
+                            {request.document_name}
                           </div>
-                          <div
-                            className="text-xs"
-                            style={{ color: "var(--text-muted)" }}
-                          >
+                          <div className="text-xs" style={{ color: "var(--text-muted)" }}>
                             Submitted {formatDate(request.created_at)}
                           </div>
                           <p
@@ -865,10 +892,7 @@ export default function AdminPage() {
                             {request.document_hash}
                           </p>
                           {request.notes && (
-                            <p
-                              className="text-sm"
-                              style={{ color: "var(--text-muted)" }}
-                            >
+                            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                               {request.notes}
                             </p>
                           )}
@@ -878,15 +902,11 @@ export default function AdminPage() {
                           <button
                             type="button"
                             onClick={() => approveKyc(request)}
-                            disabled={
-                              action ===
-                              `kyc-${request.verification_request_id}-approved`
-                            }
+                            disabled={action === `kyc-${request.verification_request_id}-approved`}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#14F195]"
                             style={{ background: "#14F19510" }}
                           >
-                            {action ===
-                            `kyc-${request.verification_request_id}-approved` ? (
+                            {action === `kyc-${request.verification_request_id}-approved` ? (
                               <RefreshCw className="w-3 h-3 animate-spin" />
                             ) : (
                               <CheckCircle2 className="w-3 h-3" />
@@ -990,21 +1010,13 @@ export default function AdminPage() {
                         className="px-5 py-3.5 text-xs font-mono"
                         style={{ color: "var(--text-faint)" }}
                       >
-                        {log.actor_user_id
-                          ? `${log.actor_user_id.slice(0, 8)}…`
-                          : "system"}
+                        {log.actor_user_id ? `${log.actor_user_id.slice(0, 8)}…` : "system"}
                       </td>
                       <td className="px-5 py-3.5">
-                        <span
-                          className="text-xs capitalize"
-                          style={{ color: "var(--text-muted)" }}
-                        >
+                        <span className="text-xs capitalize" style={{ color: "var(--text-muted)" }}>
                           {log.entity_type}
                         </span>
-                        <span
-                          className="text-xs"
-                          style={{ color: "var(--text-faint)" }}
-                        >
+                        <span className="text-xs" style={{ color: "var(--text-faint)" }}>
                           {" "}
                           · {log.entity_id.slice(0, 8)}…
                         </span>
@@ -1030,7 +1042,14 @@ export default function AdminPage() {
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md"
           style={{ background: "rgba(12, 15, 15, 0.55)" }}
+          role="button"
+          tabIndex={0}
           onClick={() => setDialogImage(null)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " " || e.key === "Escape") {
+              setDialogImage(null);
+            }
+          }}
         >
           <div
             className="relative w-full max-w-4xl overflow-hidden rounded-[2rem] border"
@@ -1038,7 +1057,9 @@ export default function AdminPage() {
               background: "var(--surface)",
               borderColor: "var(--border)",
             }}
+            role="presentation"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             <button
               type="button"
@@ -1053,10 +1074,7 @@ export default function AdminPage() {
             >
               <X className="w-4 h-4" />
             </button>
-            <div
-              className="relative aspect-[4/5] w-full"
-              style={{ background: "#050606" }}
-            >
+            <div className="relative aspect-[4/5] w-full" style={{ background: "#050606" }}>
               <Image
                 src={dialogImage.src}
                 alt={dialogImage.alt}
@@ -1087,9 +1105,7 @@ export default function AdminPage() {
               <div>
                 <p className="label-xs mb-2">KYC Review</p>
                 <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
-                  {kycDialog.outcome === "rejected"
-                    ? "Reject document"
-                    : "Request changes"}
+                  {kycDialog.outcome === "rejected" ? "Reject document" : "Request changes"}
                 </h2>
               </div>
               <button
@@ -1113,28 +1129,21 @@ export default function AdminPage() {
                 className="input-new min-h-[140px]"
                 value={kycDialog.comment}
                 onChange={(e) =>
-                  setKycDialog((prev) =>
-                    prev ? { ...prev, comment: e.target.value } : prev,
-                  )
+                  setKycDialog((prev) => (prev ? { ...prev, comment: e.target.value } : prev))
                 }
                 placeholder="Optional note for the user"
               />
             </div>
 
             <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setKycDialog(null)}
-                className="btn-outline"
-              >
+              <button type="button" onClick={() => setKycDialog(null)} className="btn-outline">
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={submitKycDialog}
                 disabled={
-                  action ===
-                  `kyc-${kycDialog.request.verification_request_id}-${kycDialog.outcome}`
+                  action === `kyc-${kycDialog.request.verification_request_id}-${kycDialog.outcome}`
                 }
                 className="btn-sol"
               >
@@ -1145,6 +1154,220 @@ export default function AdminPage() {
                   "Reject"
                 ) : (
                   "Send for changes"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {assetReviewDialog && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center p-6 backdrop-blur-md"
+          style={{ background: "rgba(12, 15, 15, 0.55)" }}
+          onClick={() => setAssetReviewDialog(null)}
+        >
+          <div
+            className="w-full max-w-2xl rounded-[2rem] border p-6"
+            style={{
+              background: "var(--surface)",
+              borderColor: "var(--border)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="label-xs mb-2">Asset Review</p>
+                <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
+                  {assetReviewDialog.outcome === "rejected" ? "Reject asset" : "Request changes"}
+                </h2>
+                <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+                  {assetReviewDialog.asset.title}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAssetReviewDialog(null)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border"
+                style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="label-xs mb-2 block">Reason</label>
+                <textarea
+                  rows={4}
+                  className="input-new min-h-[120px]"
+                  value={assetReviewDialog.reason}
+                  onChange={(e) =>
+                    setAssetReviewDialog((prev) =>
+                      prev ? { ...prev, reason: e.target.value } : prev,
+                    )
+                  }
+                  placeholder="Explain what is wrong with the asset submission."
+                />
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="label-xs block">Structured Issues</label>
+                  <button
+                    type="button"
+                    className="btn-outline text-xs px-3 py-2"
+                    onClick={() =>
+                      setAssetReviewDialog((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              issues: [...prev.issues, { field: "other", note: "" }],
+                            }
+                          : prev,
+                      )
+                    }
+                  >
+                    Add issue
+                  </button>
+                </div>
+
+                {assetReviewDialog.issues.map((issue, index) => (
+                  <div
+                    key={`${issue.field}-${index}`}
+                    className="rounded-[1.25rem] border p-4"
+                    style={{ borderColor: "var(--border)", background: "var(--surface-low)" }}
+                  >
+                    <div className="grid gap-3 sm:grid-cols-[220px_minmax(0,1fr)]">
+                      <div>
+                        <label className="label-xs mb-2 block">Field</label>
+                        <select
+                          className="input-new"
+                          value={issue.field}
+                          onChange={(e) =>
+                            setAssetReviewDialog((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    issues: prev.issues.map((current, currentIndex) =>
+                                      currentIndex === index
+                                        ? { ...current, field: e.target.value }
+                                        : current,
+                                    ),
+                                  }
+                                : prev,
+                            )
+                          }
+                        >
+                          {[
+                            ["valuation_usdc", "Asset valuation"],
+                            ["minimum_buy_amount_usdc", "Minimum investment"],
+                            ["capacity_kw", "Capacity"],
+                            ["technical_passport", "Technical passport"],
+                            ["ownership_doc", "Ownership document"],
+                            ["right_to_income_doc", "Right to income"],
+                            ["financial_model", "Financial model"],
+                            ["other", "Other"],
+                          ].map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="label-xs mb-2 block">Issue note</label>
+                        <textarea
+                          rows={3}
+                          className="input-new"
+                          value={issue.note}
+                          onChange={(e) =>
+                            setAssetReviewDialog((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    issues: prev.issues.map((current, currentIndex) =>
+                                      currentIndex === index
+                                        ? { ...current, note: e.target.value }
+                                        : current,
+                                    ),
+                                  }
+                                : prev,
+                            )
+                          }
+                          placeholder="Example: valuation in the project passport does not match the submitted amount."
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <input
+                        className="input-new"
+                        placeholder="Submitted value"
+                        value={issue.actual_value ?? ""}
+                        onChange={(e) =>
+                          setAssetReviewDialog((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  issues: prev.issues.map((current, currentIndex) =>
+                                    currentIndex === index
+                                      ? { ...current, actual_value: e.target.value }
+                                      : current,
+                                  ),
+                                }
+                              : prev,
+                          )
+                        }
+                      />
+                      <input
+                        className="input-new"
+                        placeholder="Expected value"
+                        value={issue.expected_value ?? ""}
+                        onChange={(e) =>
+                          setAssetReviewDialog((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  issues: prev.issues.map((current, currentIndex) =>
+                                    currentIndex === index
+                                      ? { ...current, expected_value: e.target.value }
+                                      : current,
+                                  ),
+                                }
+                              : prev,
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setAssetReviewDialog(null)}
+                className="btn-outline"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitAssetReviewDialog}
+                disabled={
+                  action === `verify-${assetReviewDialog.asset.id}-${assetReviewDialog.outcome}`
+                }
+                className="btn-sol"
+              >
+                {action === `verify-${assetReviewDialog.asset.id}-${assetReviewDialog.outcome}` ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : assetReviewDialog.outcome === "rejected" ? (
+                  "Reject asset"
+                ) : (
+                  "Send changes"
                 )}
               </button>
             </div>

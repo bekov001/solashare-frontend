@@ -1,12 +1,7 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export type UserRole = "investor" | "issuer" | "admin";
-export type KycStatus =
-  | "not_started"
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "needs_changes";
+export type KycStatus = "not_started" | "pending" | "approved" | "rejected" | "needs_changes";
 export type KycDocumentType = "passport" | "national_id";
 
 export type AssetStatus =
@@ -36,11 +31,7 @@ export type RevenueStatus = "draft" | "posted" | "settled" | "flagged";
 
 export type VerificationOutcome = "approved" | "rejected" | "needs_changes";
 
-export type TransactionKind =
-  | "investment"
-  | "claim"
-  | "revenue_post"
-  | "wallet_link";
+export type TransactionKind = "investment" | "claim" | "revenue_post" | "wallet_link";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -76,12 +67,7 @@ export interface KycOverview {
   can_submit: boolean;
   current_request: {
     verification_request_id: string;
-    request_status:
-      | "pending"
-      | "in_review"
-      | "approved"
-      | "rejected"
-      | "cancelled";
+    request_status: "pending" | "in_review" | "approved" | "rejected" | "cancelled";
     document_type: KycDocumentType;
     document_name: string;
     mime_type: string;
@@ -117,6 +103,7 @@ export interface AssetListItem {
   status: AssetStatus;
   price_per_share_usdc: number;
   expected_annual_yield_percent: number;
+  cover_image_url: string | null;
 }
 
 export interface AssetLocation {
@@ -136,7 +123,7 @@ export interface SaleTerms {
   price_per_share_usdc: string;
   minimum_buy_amount_usdc: string;
   target_raise_usdc: string;
-  sale_status: "live" | "ended" | "upcoming";
+  sale_status: "draft" | "scheduled" | "live" | "completed" | "cancelled";
 }
 
 export interface AssetDocument {
@@ -146,7 +133,9 @@ export interface AssetDocument {
   storage_provider: StorageProvider;
   storage_uri: string;
   content_hash: string;
+  mime_type?: string | null;
   is_public: boolean;
+  created_at?: string;
 }
 
 export interface RevenueSummary {
@@ -172,11 +161,79 @@ export interface AssetDetail {
   capacity_kw: number;
   currency: string;
   expected_annual_yield_percent: number | null;
+  cover_image_url: string | null;
   issuer: AssetIssuer;
   sale_terms: SaleTerms;
   public_documents: AssetDocument[];
   revenue_summary: RevenueSummary;
   onchain_refs: OnchainRefs;
+}
+
+export interface IssuerAssetReviewIssue {
+  field: string;
+  label?: string;
+  note: string;
+  expected_value?: string;
+  actual_value?: string;
+  document_type?: DocumentType;
+}
+
+export interface IssuerAssetReviewFeedback {
+  outcome: "rejected" | "needs_changes";
+  reason: string | null;
+  created_at: string;
+  issues: IssuerAssetReviewIssue[];
+}
+
+export interface IssuerAssetListItem {
+  id: string;
+  slug: string;
+  title: string;
+  energy_type: EnergyType;
+  capacity_kw: number;
+  status: AssetStatus;
+  location_city: string | null;
+  location_country: string;
+  price_per_share_usdc: number | null;
+  valuation_usdc: number | null;
+  total_shares: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IssuerAssetDetail {
+  id: string;
+  slug: string;
+  title: string;
+  short_description: string;
+  full_description: string;
+  energy_type: EnergyType;
+  status: AssetStatus;
+  location: AssetLocation;
+  capacity_kw: number;
+  currency: string;
+  expected_annual_yield_percent: number | null;
+  cover_image_url: string | null;
+  issuer: AssetIssuer;
+  revenue_summary: RevenueSummary;
+  onchain_refs: OnchainRefs;
+  sale_terms: SaleTerms | null;
+  documents: AssetDocument[];
+  review_feedback: IssuerAssetReviewFeedback | null;
+}
+
+export interface AdminAssetItem {
+  id: string;
+  title: string;
+  slug: string;
+  energy_type: EnergyType;
+  capacity_kw: number;
+  status: AssetStatus;
+  issuer_display_name: string;
+  location_country: string;
+  location_city: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // ─── Revenue ──────────────────────────────────────────────────────────────────

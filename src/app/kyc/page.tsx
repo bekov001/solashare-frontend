@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { FileDropInput } from "@/components/FileDropInput";
+import { EmptyState } from "@/components/EmptyState";
 import { investorApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { uploadKycDocument } from "@/lib/uploads";
-import { EmptyState } from "@/components/EmptyState";
 import { formatDate } from "@/lib/utils";
 import type { KycDocumentType, KycOverview } from "@/types";
-import { CheckCircle2, FileUp, ShieldCheck, X, XCircle } from "lucide-react";
+import { CheckCircle2, ShieldCheck, X, XCircle } from "lucide-react";
 
 const DOCUMENT_TYPE_LABELS: Record<KycDocumentType, string> = {
   passport: "Passport",
@@ -17,7 +18,7 @@ const DOCUMENT_TYPE_LABELS: Record<KycDocumentType, string> = {
 };
 
 const isImageMimeType = (mimeType?: string | null) =>
-  Boolean(mimeType && mimeType.startsWith("image/"));
+  Boolean(mimeType?.startsWith("image/"));
 
 const STATUS_META = {
   not_started: {
@@ -454,33 +455,14 @@ export default function KycPage() {
 
                 <div>
                   <div className="label-xs mb-2">Document file</div>
-                  <label
-                    className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed px-6 py-10 text-center transition-colors hover:border-[#9945FF]/40"
-                    style={{
-                      borderColor: "var(--border)",
-                      background: "var(--surface-low)",
-                    }}
-                  >
-                    <FileUp className="w-6 h-6 text-[#9945FF] mb-3" />
-                    <span
-                      className="text-sm font-bold"
-                      style={{ color: "var(--text)" }}
-                    >
-                      {file ? file.name : "Choose passport or ID file"}
-                    </span>
-                    <span
-                      className="mt-1 text-xs"
-                      style={{ color: "var(--text-faint)" }}
-                    >
-                      PDF, JPG or PNG up to 10 MB.
-                    </span>
-                    <input
-                      type="file"
-                      accept=".pdf,image/png,image/jpeg,image/jpg"
-                      className="hidden"
-                      onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                    />
-                  </label>
+                  <FileDropInput
+                    accept=".pdf,image/png,image/jpeg,image/jpg"
+                    buttonLabel="Choose file"
+                    title="Drop passport or ID file here"
+                    selectedLabel={file?.name ?? null}
+                    description="PDF, JPG or PNG up to 10 MB."
+                    onFilesSelected={(files) => setFile(files[0] ?? null)}
+                  />
                   {localPreviewUrl && (
                     <button
                       type="button"

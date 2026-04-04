@@ -3,15 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { FileDropInput } from "@/components/FileDropInput";
+import { EmptyState } from "@/components/EmptyState";
+import { WalletSetupCard } from "@/components/WalletSetupCard";
 import { investorApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { uploadAvatarImage } from "@/lib/uploads";
-import { WalletSetupCard } from "@/components/WalletSetupCard";
-import { EmptyState } from "@/components/EmptyState";
 import type { AuthUser } from "@/types";
 import {
   ArrowUpRight,
-  Camera,
   LogOut,
   Mail,
   ShieldCheck,
@@ -37,7 +37,7 @@ export default function ProfilePage() {
     alt: string;
   } | null>(null);
   const localAvatarPreview = useMemo(() => {
-    if (!avatarFile || !avatarFile.type.startsWith("image/")) {
+    if (!avatarFile?.type.startsWith("image/")) {
       return null;
     }
 
@@ -278,35 +278,14 @@ export default function ProfilePage() {
                     </div>
                   </button>
 
-                  <label
-                    className="flex cursor-pointer flex-col justify-center rounded-3xl border border-dashed px-6 py-6 transition-colors hover:border-[#9945FF]/40"
-                    style={{
-                      borderColor: "var(--border)",
-                      background: "var(--surface-low)",
-                    }}
-                  >
-                    <Camera className="w-5 h-5 text-[#9945FF] mb-3" />
-                    <span
-                      className="text-sm font-bold"
-                      style={{ color: "var(--text)" }}
-                    >
-                      {avatarFile ? avatarFile.name : "Upload new avatar"}
-                    </span>
-                    <span
-                      className="mt-1 text-xs"
-                      style={{ color: "var(--text-faint)" }}
-                    >
-                      JPG or PNG up to 10 MB. Click the preview to inspect it.
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg"
-                      className="hidden"
-                      onChange={(e) =>
-                        setAvatarFile(e.target.files?.[0] ?? null)
-                      }
-                    />
-                  </label>
+                  <FileDropInput
+                    accept="image/png,image/jpeg,image/jpg"
+                    buttonLabel="Choose avatar"
+                    title="Drop a new avatar here"
+                    selectedLabel={avatarFile?.name ?? null}
+                    description="JPG or PNG up to 10 MB. Click the preview to inspect it."
+                    onFilesSelected={(files) => setAvatarFile(files[0] ?? null)}
+                  />
                 </div>
               </div>
 

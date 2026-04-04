@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { assetsApi, investorApi } from "@/lib/api";
+import { adminApi, assetsApi, investorApi, issuerApi } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
 import { InvestorSetupCard } from "@/components/InvestorSetupCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -21,6 +21,7 @@ import type {
   AssetDetail,
   AssetDocument,
   HoldersSummary,
+  IssuerAssetDetail,
   RevenueEpoch,
 } from "@/types";
 import {
@@ -37,14 +38,15 @@ type Tab = "overview" | "documents" | "revenue" | "holders";
 
 export default function AssetDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
-  const [asset, setAsset] = useState<AssetDetail | null>(null);
+  const { user, isLoading: authLoading } = useAuth();
+  const [asset, setAsset] = useState<AssetDetail | IssuerAssetDetail | null>(null);
   const [holders, setHolders] = useState<HoldersSummary | null>(null);
   const [revenue, setRevenue] = useState<RevenueEpoch[]>([]);
   const [documents, setDocuments] = useState<AssetDocument[]>([]);
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isPrivatePreview, setIsPrivatePreview] = useState(false);
 
   const [investAmount, setInvestAmount] = useState("");
   const [quote, setQuote] = useState<{
@@ -55,13 +57,32 @@ export default function AssetDetailPage() {
   const [investMsg, setInvestMsg] = useState("");
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || authLoading) return;
 
     setLoading(true);
     setError("");
+    setIsPrivatePreview(false);
+
+    const loadAsset = async () => {
+      try {
+        return await assetsApi.get(id);
+      } catch (publicError) {
+        if (user?.role === "issuer") {
+          setIsPrivatePreview(true);
+          return issuerApi.getAsset(id);
+        }
+
+        if (user?.role === "admin") {
+          setIsPrivatePreview(true);
+          return adminApi.getAsset(id);
+        }
+
+        throw publicError;
+      }
+    };
 
     Promise.all([
-      assetsApi.get(id),
+      loadAsset(),
       assetsApi.holdersSummary(id).catch(() => null),
       assetsApi.revenue(id).catch(() => ({ items: [] })),
       assetsApi.documents(id).catch(() => ({ items: [] })),
@@ -70,14 +91,14 @@ export default function AssetDetailPage() {
         setAsset(assetRes);
         setHolders(holdersRes);
         setRevenue(revenueRes.items);
-        setDocuments(documentsRes.items);
+        setDocuments("public_documents" in assetRes ? documentsRes.items : assetRes.documents);
       })
       .catch((err) => {
         setAsset(null);
         setError(err instanceof Error ? err.message : "Failed to load asset.");
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [authLoading, id, user?.role]);
 
   async function handleQuote() {
     if (!asset || !investAmount) return;
@@ -112,7 +133,7 @@ export default function AssetDetailPage() {
     }
   }
 
-  if (loading) return <AssetDetailSkeleton />;
+  if (loading || authLoading) return <AssetDetailSkeleton />;
 
   if (!asset) {
     return (
@@ -127,10 +148,18 @@ export default function AssetDetailPage() {
 
   const energy = ENERGY_META[asset.energy_type];
   const fundedPct = holders?.funded_percent ?? 0;
+  const issuerDisplayName = "issuer" in asset ? asset.issuer.display_name : "Issuer";
+  const visibleDocuments = "public_documents" in asset ? documents : asset.documents;
+  const saleTerms = asset.sale_terms;
+  const isSaleLive = asset.status === "active_sale" && saleTerms?.sale_status === "live";
+  const revenueSummary =
+    "revenue_summary" in asset
+      ? asset.revenue_summary
+      : { total_epochs: revenue.length, last_posted_epoch: revenue[0]?.epoch_number ?? null };
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "overview", label: "Overview" },
-    { key: "documents", label: `Documents (${documents.length})` },
+    { key: "documents", label: `Documents (${visibleDocuments.length})` },
     { key: "revenue", label: `Revenue (${revenue.length})` },
     { key: "holders", label: "Holders" },
   ];
@@ -148,6 +177,14 @@ export default function AssetDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <div className="card p-7">
+            {isPrivatePreview && (
+              <div
+                className="mb-4 rounded-2xl px-4 py-3 text-sm font-medium text-amber-300"
+                style={{ background: "rgba(251, 191, 36, 0.12)" }}
+              >
+                Private preview. This asset is not public yet.
+              </div>
+            )}
             <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
               <div className="flex items-center gap-3">
                 <div
@@ -191,7 +228,7 @@ export default function AssetDetailPage() {
               </span>
               <span className="flex items-center gap-1.5">
                 <Shield className="w-3.5 h-3.5 text-[#9945FF]" />
-                Issuer: {asset.issuer.display_name}
+                Issuer: {issuerDisplayName}
               </span>
             </div>
           </div>
@@ -235,7 +272,7 @@ export default function AssetDetailPage() {
                     </p>
                   </div>
 
-                  {asset.onchain_refs.onchain_asset_pubkey && (
+                  {"onchain_refs" in asset && asset.onchain_refs.onchain_asset_pubkey && (
                     <div>
                       <h3
                         className="font-black mb-3"
@@ -284,15 +321,15 @@ export default function AssetDetailPage() {
 
               {tab === "documents" && (
                 <div className="space-y-3">
-                  {documents.length === 0 ? (
+                  {visibleDocuments.length === 0 ? (
                     <p
                       className="text-sm"
                       style={{ color: "var(--text-muted)" }}
                     >
-                      No public documents yet.
+                      No documents available yet.
                     </p>
                   ) : (
-                    documents.map((doc) => (
+                    visibleDocuments.map((doc) => (
                       <div
                         key={doc.id}
                         className="flex items-center justify-between p-4 rounded-2xl border transition-all hover:border-[#9945FF]/20"
@@ -494,47 +531,45 @@ export default function AssetDetailPage() {
             </div>
 
             <div className="space-y-2.5">
-              {[
-                {
-                  label: "Valuation",
-                  val: formatUSDC(parseFloat(asset.sale_terms.valuation_usdc)),
-                },
-                {
-                  label: "Total Shares",
-                  val: formatNumber(asset.sale_terms.total_shares),
-                },
-                {
-                  label: "Price / Share",
-                  val: formatUSDC(
-                    parseFloat(asset.sale_terms.price_per_share_usdc),
-                  ),
-                },
-                {
-                  label: "Min. Buy",
-                  val: formatUSDC(
-                    parseFloat(asset.sale_terms.minimum_buy_amount_usdc),
-                  ),
-                },
-                {
-                  label: "Target Raise",
-                  val: formatUSDC(
-                    parseFloat(asset.sale_terms.target_raise_usdc),
-                  ),
-                },
-              ].map((row) => (
-                <div
-                  key={row.label}
-                  className="flex items-center justify-between text-sm border-b pb-2 last:border-0 last:pb-0"
-                  style={{ borderColor: "var(--border)" }}
-                >
-                  <span style={{ color: "var(--text-muted)" }}>
-                    {row.label}
-                  </span>
-                  <span className="font-bold" style={{ color: "var(--text)" }}>
-                    {row.val}
-                  </span>
-                </div>
-              ))}
+              {saleTerms ? (
+                [
+                  {
+                    label: "Valuation",
+                    val: formatUSDC(parseFloat(saleTerms.valuation_usdc)),
+                  },
+                  {
+                    label: "Total Shares",
+                    val: formatNumber(saleTerms.total_shares),
+                  },
+                  {
+                    label: "Price / Share",
+                    val: formatUSDC(parseFloat(saleTerms.price_per_share_usdc)),
+                  },
+                  {
+                    label: "Min. Buy",
+                    val: formatUSDC(parseFloat(saleTerms.minimum_buy_amount_usdc)),
+                  },
+                  {
+                    label: "Target Raise",
+                    val: formatUSDC(parseFloat(saleTerms.target_raise_usdc)),
+                  },
+                ].map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex items-center justify-between text-sm border-b pb-2 last:border-0 last:pb-0"
+                    style={{ borderColor: "var(--border)" }}
+                  >
+                    <span style={{ color: "var(--text-muted)" }}>{row.label}</span>
+                    <span className="font-bold" style={{ color: "var(--text)" }}>
+                      {row.val}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  Sale terms are not available yet.
+                </p>
+              )}
             </div>
 
             <div
@@ -550,8 +585,26 @@ export default function AssetDetailPage() {
             </div>
           </div>
 
-          {asset.status === "active_sale" &&
-            (!user ? (
+          {saleTerms &&
+            (!isSaleLive ? (
+              <div className="card p-6 space-y-3">
+                <h3 className="font-black" style={{ color: "var(--text)" }}>
+                  Investment unavailable
+                </h3>
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  The buy action appears only after the asset enters
+                  <span className="font-semibold text-[var(--text)]"> active_sale </span>
+                  and sale status becomes
+                  <span className="font-semibold text-[var(--text)]"> live</span>.
+                </p>
+                <div
+                  className="rounded-2xl px-4 py-3 text-xs font-medium"
+                  style={{ background: "var(--surface-low)", color: "var(--text-muted)" }}
+                >
+                  Current asset status: {asset.status}. Current sale status: {saleTerms.sale_status}.
+                </div>
+              </div>
+            ) : !user ? (
               <div className="card p-6 space-y-3">
                 <h3 className="font-black" style={{ color: "var(--text)" }}>
                   Invest
@@ -563,20 +616,6 @@ export default function AssetDetailPage() {
                 <Link href="/login" className="btn-sol w-full text-center">
                   Log In To Continue
                 </Link>
-              </div>
-            ) : user.role !== "investor" ? (
-              <div className="card p-6 space-y-3">
-                <h3 className="font-black" style={{ color: "var(--text)" }}>
-                  Investor Access Required
-                </h3>
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  Investments are available only for accounts with the
-                  <span className="font-semibold text-[var(--text)]">
-                    {" "}
-                    investor
-                  </span>{" "}
-                  role.
-                </p>
               </div>
             ) : user.kyc_status !== "approved" || !user.wallet_address ? (
               <InvestorSetupCard />
@@ -674,7 +713,7 @@ export default function AssetDetailPage() {
                 style={{ background: "var(--surface-low)" }}
               >
                 <p className="text-2xl font-black text-[#14F195]">
-                  {asset.revenue_summary.total_epochs}
+                  {revenueSummary.total_epochs}
                 </p>
                 <p
                   className="text-xs mt-0.5"
@@ -688,7 +727,7 @@ export default function AssetDetailPage() {
                 style={{ background: "var(--surface-low)" }}
               >
                 <p className="text-2xl font-black text-[#9945FF]">
-                  {asset.revenue_summary.last_posted_epoch ?? "—"}
+                  {revenueSummary.last_posted_epoch ?? "—"}
                 </p>
                 <p
                   className="text-xs mt-0.5"

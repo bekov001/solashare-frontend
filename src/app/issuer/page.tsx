@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ArrowUpRight, BarChart2, Plus, RefreshCw, Send, Zap } from "lucide-react";
 import Link from "next/link";
-import { assetsApi, issuerApi } from "@/lib/api";
+import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
-import { useAuth } from "@/lib/auth";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ENERGY_META, formatUSDC, formatNumber } from "@/lib/utils";
-import type { AssetListItem } from "@/types";
-import { Plus, ArrowUpRight, Send, RefreshCw, BarChart2, Zap } from "lucide-react";
+import { issuerApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { ENERGY_META, formatNumber, formatUSDC } from "@/lib/utils";
+import type { IssuerAssetListItem } from "@/types";
 
 export default function IssuerPage() {
   const { user, isLoading: authLoading } = useAuth();
-  const [assets, setAssets] = useState<AssetListItem[]>([]);
+  const [assets, setAssets] = useState<IssuerAssetListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
@@ -26,8 +26,8 @@ export default function IssuerPage() {
 
     setError("");
 
-    assetsApi
-      .list({ limit: 50 })
+    issuerApi
+      .listAssets({ limit: 50 })
       .then((r) => setAssets(r.items))
       .catch((err) => {
         setAssets([]);
@@ -44,7 +44,9 @@ export default function IssuerPage() {
       const res = await issuerApi.submit(assetId);
       setMsg(`Asset submitted → ${res.next_status}`);
       setAssets((prev) =>
-        prev.map((a) => (a.id === assetId ? { ...a, status: res.next_status as AssetListItem["status"] } : a)),
+        prev.map((a) =>
+          a.id === assetId ? { ...a, status: res.next_status as IssuerAssetListItem["status"] } : a,
+        ),
       );
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Failed to submit asset.");
@@ -74,7 +76,10 @@ export default function IssuerPage() {
 
   if (user.role !== "issuer") {
     return (
-      <div className="max-w-2xl mx-auto px-6 py-24 text-center" style={{ color: "var(--text-muted)" }}>
+      <div
+        className="max-w-2xl mx-auto px-6 py-24 text-center"
+        style={{ color: "var(--text-muted)" }}
+      >
         Access restricted to issuers.
       </div>
     );
@@ -104,10 +109,26 @@ export default function IssuerPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Draft", count: assets.filter((a) => a.status === "draft").length, color: "text-[var(--text-muted)]" },
-          { label: "Under Review", count: assets.filter((a) => a.status === "pending_review").length, color: "text-[#9945FF]" },
-          { label: "Active Sale", count: assets.filter((a) => a.status === "active_sale").length, color: "text-[#14F195]" },
-          { label: "Funded", count: assets.filter((a) => a.status === "funded").length, color: "text-[#00693e]" },
+          {
+            label: "Draft",
+            count: assets.filter((a) => a.status === "draft").length,
+            color: "text-[var(--text-muted)]",
+          },
+          {
+            label: "Under Review",
+            count: assets.filter((a) => a.status === "pending_review").length,
+            color: "text-[#9945FF]",
+          },
+          {
+            label: "Active Sale",
+            count: assets.filter((a) => a.status === "active_sale").length,
+            color: "text-[#14F195]",
+          },
+          {
+            label: "Funded",
+            count: assets.filter((a) => a.status === "funded").length,
+            color: "text-[#00693e]",
+          },
         ].map((s) => (
           <div key={s.label} className="card p-5 text-center">
             <p className={`text-3xl font-black ${s.color}`}>{s.count}</p>
@@ -117,15 +138,18 @@ export default function IssuerPage() {
       </div>
 
       {msg && (
-        <div className="rounded-2xl px-5 py-3 text-sm font-medium text-[#9945FF]" style={{ background: "#9945FF10" }}>
+        <div
+          className="rounded-2xl px-5 py-3 text-sm font-medium text-[#9945FF]"
+          style={{ background: "#9945FF10" }}
+        >
           {msg}
         </div>
       )}
 
       {loading ? (
         <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="card h-24 animate-pulse" />
+          {["issuer-loading-1", "issuer-loading-2", "issuer-loading-3"].map((key) => (
+            <div key={key} className="card h-24 animate-pulse" />
           ))}
         </div>
       ) : error ? (
@@ -163,7 +187,10 @@ export default function IssuerPage() {
                         {a.title}
                       </h3>
                       <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        {energy.label} · {formatNumber(a.capacity_kw)} kW · {formatUSDC(a.price_per_share_usdc)}/share
+                        {energy.label} · {formatNumber(a.capacity_kw)} kW ·{" "}
+                        {a.price_per_share_usdc === null
+                          ? "pricing pending"
+                          : `${formatUSDC(a.price_per_share_usdc)}/share`}
                       </p>
                     </div>
                   </div>
@@ -175,7 +202,7 @@ export default function IssuerPage() {
                       className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-[#9945FF]"
                       style={{ background: "#9945FF10" }}
                     >
-                      {a.expected_annual_yield_percent}% APY
+                      {a.valuation_usdc === null ? "Draft Pricing" : formatUSDC(a.valuation_usdc)}
                     </span>
 
                     <Link href={`/issuer/assets/${a.id}`} className="btn-outline text-xs px-3 py-2">
@@ -184,6 +211,7 @@ export default function IssuerPage() {
 
                     {canSubmit && (
                       <button
+                        type="button"
                         onClick={() => handleSubmit(a.id)}
                         disabled={submitting === a.id}
                         className="btn-dark text-xs px-3 py-2"

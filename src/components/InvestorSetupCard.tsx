@@ -26,7 +26,7 @@ export function InvestorSetupCard() {
   return (
     <div className="card p-6 space-y-5">
       <div>
-        <p className="label-xs mb-2">Investor Access</p>
+        <p className="label-xs mb-2">Investment Access</p>
         <h3 className="text-xl font-black" style={{ color: "var(--text)" }}>
           Complete account access before investing
         </h3>
