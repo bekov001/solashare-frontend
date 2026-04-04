@@ -3,6 +3,7 @@ import type {
   AssetDocument,
   AssetFilters,
   AssetListItem,
+  AdminUserItem,
   AuditLog,
   AuthResponse,
   Claim,
@@ -509,4 +510,52 @@ export const adminApi = {
       true,
     );
   },
+
+  users: (
+    params: {
+      role?: "investor" | "issuer" | "admin";
+      status?: "active" | "blocked";
+      search?: string;
+      page?: number;
+      limit?: number;
+    } = {},
+  ) => {
+    const qs = new URLSearchParams(
+      Object.entries(params)
+        .filter(([, v]) => v !== undefined && v !== "")
+        .map(([k, v]) => [k, String(v)]),
+    ).toString();
+
+    return request<{ items: AdminUserItem[]; pagination: Pagination }>(
+      `/admin/users${qs ? `?${qs}` : ""}`,
+      {},
+      true,
+    );
+  },
+
+  createUser: (data: {
+    email: string;
+    password: string;
+    display_name: string;
+    role: "investor" | "issuer" | "admin";
+  }) =>
+    request<{ success: boolean; user_id: string; role: string }>(
+      "/admin/users",
+      { method: "POST", body: JSON.stringify(data) },
+      true,
+    ),
+
+  updateUserRole: (id: string, role: "investor" | "issuer" | "admin", reason: string) =>
+    request<{ success: boolean; user_id: string; role: string }>(
+      `/admin/users/${id}/role`,
+      { method: "POST", body: JSON.stringify({ role, reason }) },
+      true,
+    ),
+
+  deleteUser: (id: string) =>
+    request<{ success: boolean; user_id: string }>(
+      `/admin/users/${id}`,
+      { method: "DELETE" },
+      true,
+    ),
 };

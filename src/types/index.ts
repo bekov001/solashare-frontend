@@ -316,6 +316,17 @@ export interface KycRequestItem {
   created_at: string;
 }
 
+export interface AdminUserItem {
+  id: string;
+  display_name: string;
+  email: string | null;
+  role: UserRole;
+  status: "active" | "blocked";
+  kyc_status: KycStatus;
+  auth_providers: Array<"password" | "google" | "telegram">;
+  created_at: string;
+}
+
 // ─── Filters ──────────────────────────────────────────────────────────────────
 
 export interface AssetFilters {
