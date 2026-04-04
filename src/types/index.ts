@@ -1,6 +1,13 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export type UserRole = "investor" | "issuer" | "admin";
+export type KycStatus =
+  | "not_started"
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "needs_changes";
+export type KycDocumentType = "passport" | "national_id";
 
 export type AssetStatus =
   | "draft"
@@ -39,11 +46,57 @@ export type TransactionKind =
 
 export interface AuthUser {
   id: string;
-  email: string;
+  email: string | null;
   display_name: string;
+  bio?: string | null;
+  avatar_url?: string | null;
   role: UserRole;
+  kyc_status?: KycStatus;
   wallet_address?: string;
   auth_providers: string[];
+}
+
+export interface WalletChallengeResponse {
+  challenge: string;
+  nonce: string;
+  expires_at: string;
+}
+
+export interface WalletVerifyResponse {
+  success: boolean;
+  verified: boolean;
+  error?: string;
+}
+
+export interface KycOverview {
+  kyc_status: KycStatus;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  decision_notes: string | null;
+  can_submit: boolean;
+  current_request: {
+    verification_request_id: string;
+    request_status:
+      | "pending"
+      | "in_review"
+      | "approved"
+      | "rejected"
+      | "cancelled";
+    document_type: KycDocumentType;
+    document_name: string;
+    mime_type: string;
+    document_uri: string;
+    document_hash: string;
+    notes: string | null;
+    created_at: string;
+  } | null;
+}
+
+export interface PresignedUpload {
+  upload_url: string;
+  file_url: string;
+  upload_method: "PUT";
+  expires_at: string;
 }
 
 export interface AuthResponse {
@@ -68,8 +121,8 @@ export interface AssetListItem {
 
 export interface AssetLocation {
   country: string;
-  region?: string;
-  city: string;
+  region?: string | null;
+  city: string | null;
 }
 
 export interface AssetIssuer {
@@ -98,7 +151,7 @@ export interface AssetDocument {
 
 export interface RevenueSummary {
   total_epochs: number;
-  last_posted_epoch: number;
+  last_posted_epoch: number | null;
 }
 
 export interface OnchainRefs {
@@ -118,7 +171,7 @@ export interface AssetDetail {
   location: AssetLocation;
   capacity_kw: number;
   currency: string;
-  expected_annual_yield_percent: number;
+  expected_annual_yield_percent: number | null;
   issuer: AssetIssuer;
   sale_terms: SaleTerms;
   public_documents: AssetDocument[];
@@ -174,7 +227,7 @@ export interface Claim {
   revenue_epoch_id: string;
   claim_amount_usdc: number;
   status: "pending" | "confirmed" | "failed";
-  transaction_signature: string;
+  transaction_signature: string | null;
 }
 
 // ─── Investment ───────────────────────────────────────────────────────────────
@@ -183,6 +236,45 @@ export interface InvestmentQuote {
   shares_to_receive: number;
   price_per_share_usdc: number;
   fees_usdc: number;
+}
+
+export interface PreparedTransactionMetadataBase {
+  kind: TransactionKind;
+  asset_id: string;
+}
+
+export interface InvestmentPreparedTransactionMetadata extends PreparedTransactionMetadataBase {
+  kind: "investment";
+  amount_usdc: number;
+  shares_to_receive: number;
+}
+
+export interface ClaimPreparedTransactionMetadata extends PreparedTransactionMetadataBase {
+  kind: "claim";
+  revenue_epoch_id: string;
+  epoch_number: number;
+  claim_amount_usdc: number;
+}
+
+export interface RevenuePostPreparedTransactionMetadata extends PreparedTransactionMetadataBase {
+  kind: "revenue_post";
+  revenue_epoch_id: string;
+  epoch_number: number;
+  amount_usdc: number;
+}
+
+export type PreparedTransactionMetadata =
+  | InvestmentPreparedTransactionMetadata
+  | ClaimPreparedTransactionMetadata
+  | RevenuePostPreparedTransactionMetadata;
+
+export interface PreparedTransactionResponse {
+  success: true;
+  operation_id: string;
+  serialized_tx: string;
+  metadata: PreparedTransactionMetadata;
+  expires_at: number;
+  network: "devnet" | "mainnet" | "localnet";
 }
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
@@ -206,6 +298,21 @@ export interface AuditLog {
   entity_type: string;
   entity_id: string;
   action: string;
+  created_at: string;
+}
+
+export interface KycRequestItem {
+  verification_request_id: string;
+  user_id: string;
+  display_name: string;
+  email: string | null;
+  kyc_status: KycStatus;
+  document_type: KycDocumentType;
+  document_name: string;
+  mime_type: string;
+  document_uri: string;
+  document_hash: string;
+  notes: string | null;
   created_at: string;
 }
 

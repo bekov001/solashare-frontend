@@ -1,71 +1,74 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import type { AuthUser, UserRole } from "@/types";
+import { authApi } from "@/lib/api";
+import type { AuthResponse, AuthUser } from "@/types";
+import { clearSession, getStoredSession, storeSession } from "@/lib/session";
 
 interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
   isLoading: boolean;
-  login: (token: string, user: AuthUser) => void;
+  login: (session: AuthResponse) => void;
   logout: () => void;
-  /** Dev-only: switch role without a real backend call */
-  devSwitchRole: (role: UserRole) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const TOKEN_KEY = "solashare_token";
-const USER_KEY  = "solashare_user";
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser]       = useState<AuthUser | null>(null);
-  const [token, setToken]     = useState<string | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem(TOKEN_KEY);
-    const storedUser  = localStorage.getItem(USER_KEY);
-    if (storedToken && storedUser) {
-      try {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
-      }
-    }
-    setIsLoading(false);
-  }, []);
-
-  const login = useCallback((t: string, u: AuthUser) => {
-    localStorage.setItem(TOKEN_KEY, t);
-    localStorage.setItem(USER_KEY, JSON.stringify(u));
-    setToken(t);
-    setUser(u);
-  }, []);
-
   const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    clearSession();
     setToken(null);
     setUser(null);
   }, []);
 
-  const devSwitchRole = useCallback((role: UserRole) => {
-    const mock: AuthUser = {
-      id:             "dev-user-" + role,
-      email:          role + "@dev.solashare",
-      display_name:   role === "admin" ? "Admin User" : role === "issuer" ? "SolaShare Issuer" : "Demo Investor",
-      role,
-      auth_providers: ["password"],
-    };
-    const mockToken = "dev_token_" + role;
-    login(mockToken, mock);
-  }, [login]);
+  const login = useCallback((session: AuthResponse) => {
+    storeSession(session);
+    setToken(session.access_token);
+    setUser(session.user);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const session = getStoredSession();
+
+    if (!session?.accessToken) {
+      logout();
+      return;
+    }
+
+    try {
+      const res = await authApi.me();
+      storeSession({
+        access_token: getStoredSession()?.accessToken ?? session.accessToken,
+        refresh_token: getStoredSession()?.refreshToken ?? session.refreshToken ?? "",
+        user: res.user,
+      });
+      setToken(getStoredSession()?.accessToken ?? session.accessToken);
+      setUser(res.user);
+    } catch {
+      logout();
+    }
+  }, [logout]);
+
+  useEffect(() => {
+    const session = getStoredSession();
+
+    if (session?.accessToken) {
+      setToken(session.accessToken);
+      setUser(session.user);
+      void refreshUser();
+    }
+
+    setIsLoading(false);
+  }, [refreshUser]);
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout, devSwitchRole }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

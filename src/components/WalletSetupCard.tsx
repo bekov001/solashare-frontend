@@ -1,0 +1,93 @@
+"use client";
+
+import { useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { connectWallet, ensureWalletBound } from "@/lib/solana";
+import { CheckCircle2, Wallet } from "lucide-react";
+
+export function WalletSetupCard() {
+  const { user, refreshUser } = useAuth();
+  const [bindingWallet, setBindingWallet] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  if (!user) {
+    return null;
+  }
+
+  const walletBound = Boolean(user.wallet_address);
+
+  async function handleWalletBind() {
+    setBindingWallet(true);
+    setError("");
+    setMessage("");
+
+    try {
+      await connectWallet();
+      const walletAddress = await ensureWalletBound();
+      await refreshUser();
+      setMessage(`Wallet connected: ${walletAddress}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to connect wallet.");
+    } finally {
+      setBindingWallet(false);
+    }
+  }
+
+  return (
+    <div className="card p-6 space-y-5">
+      <div>
+        <p className="label-xs mb-2">Wallet</p>
+        <h3 className="text-xl font-black" style={{ color: "var(--text)" }}>
+          Solana wallet connection
+        </h3>
+      </div>
+
+      <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-[#14F195]" />
+            <span className="text-sm font-bold" style={{ color: "var(--text)" }}>
+              Status
+            </span>
+          </div>
+          <span className={`text-xs font-bold ${walletBound ? "text-[#14F195]" : "text-[#9945FF]"}`}>
+            {walletBound ? "Connected" : "Not connected"}
+          </span>
+        </div>
+        {user.wallet_address && (
+          <p className="mt-2 text-xs font-mono break-all" style={{ color: "var(--text-faint)" }}>
+            {user.wallet_address}
+          </p>
+        )}
+      </div>
+
+      {!walletBound && (
+        <button type="button" onClick={handleWalletBind} disabled={bindingWallet} className="btn-dark w-full">
+          {bindingWallet ? "Connecting Wallet..." : "Connect Solana Wallet"}
+        </button>
+      )}
+
+      {walletBound && (
+        <div className="rounded-2xl p-4 text-sm font-medium text-[#14F195]" style={{ background: "#14F19510" }}>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            Wallet is ready for signing transactions.
+          </div>
+        </div>
+      )}
+
+      {message && (
+        <div className="rounded-2xl p-3 text-xs font-medium text-[#14F195]" style={{ background: "#14F19510" }}>
+          {message}
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-2xl p-3 text-xs font-medium text-red-400" style={{ background: "rgba(248,113,113,0.1)" }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}

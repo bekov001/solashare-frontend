@@ -4,7 +4,13 @@ import { useEffect, useState, useCallback } from "react";
 import { assetsApi } from "@/lib/api";
 import { AssetCard, AssetCardSkeleton } from "@/components/AssetCard";
 import { EmptyState } from "@/components/EmptyState";
-import type { AssetFilters, AssetListItem, AssetStatus, EnergyType, Pagination } from "@/types";
+import type {
+  AssetFilters,
+  AssetListItem,
+  AssetStatus,
+  EnergyType,
+  Pagination,
+} from "@/types";
 import { ENERGY_META, STATUS_META } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -19,51 +25,66 @@ const ENERGY_OPTIONS: { value: EnergyType | ""; label: string }[] = [
 const STATUS_OPTIONS: { value: AssetStatus | ""; label: string }[] = [
   { value: "", label: "Any Status" },
   { value: "active_sale", label: "Active Sale" },
-  { value: "verified",    label: "Verified" },
-  { value: "funded",      label: "Funded" },
+  { value: "verified", label: "Verified" },
+  { value: "funded", label: "Funded" },
 ];
 
 const SORT_OPTIONS = [
-  { value: "newest",     label: "Newest" },
+  { value: "newest", label: "Newest" },
   { value: "yield_desc", label: "Highest Yield" },
-  { value: "price_asc",  label: "Lowest Price" },
+  { value: "price_asc", label: "Lowest Price" },
 ];
 
 export default function AssetsPage() {
-  const [assets, setAssets]         = useState<AssetListItem[]>([]);
+  const [assets, setAssets] = useState<AssetListItem[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [loading, setLoading]       = useState(true);
-  const [filters, setFilters]       = useState<AssetFilters>({ page: 1, limit: 12, sort: "newest" });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [filters, setFilters] = useState<AssetFilters>({
+    page: 1,
+    limit: 12,
+    sort: "newest",
+  });
 
   const fetchAssets = useCallback(async (f: AssetFilters) => {
     setLoading(true);
+    setError("");
     try {
       const res = await assetsApi.list(f);
       setAssets(res.items);
       setPagination(res.pagination);
-    } catch {
-      setAssets(MOCK_ASSETS);
-      setPagination({ page: 1, limit: 12, total: MOCK_ASSETS.length });
+    } catch (err) {
+      setAssets([]);
+      setPagination(null);
+      setError(err instanceof Error ? err.message : "Failed to load assets.");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchAssets(filters); }, [filters, fetchAssets]);
+  useEffect(() => {
+    fetchAssets(filters);
+  }, [filters, fetchAssets]);
 
   const updateFilter = (patch: Partial<AssetFilters>) =>
-    setFilters(f => ({ ...f, ...patch, page: 1 }));
+    setFilters((f) => ({ ...f, ...patch, page: 1 }));
 
-  const totalPages = pagination ? Math.ceil(pagination.total / (pagination.limit || 12)) : 1;
+  const totalPages = pagination
+    ? Math.ceil(pagination.total / (pagination.limit || 12))
+    : 1;
 
   return (
     <div className="max-w-[1440px] mx-auto px-8 py-10 animate-fade-in">
       {/* Header */}
       <div className="mb-8">
         <p className="label-xs mb-2">Marketplace</p>
-        <h1 className="text-4xl font-black" style={{ color: "var(--text)" }}>Explore Solar Assets</h1>
+        <h1 className="text-4xl font-black" style={{ color: "var(--text)" }}>
+          Explore Solar Assets
+        </h1>
         {pagination && (
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{pagination.total} assets found</p>
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+            {pagination.total} assets found
+          </p>
         )}
       </div>
 
@@ -72,24 +93,38 @@ export default function AssetsPage() {
         {/* Sort */}
         <select
           value={filters.sort ?? "newest"}
-          onChange={e => updateFilter({ sort: e.target.value as AssetFilters["sort"] })}
+          onChange={(e) =>
+            updateFilter({ sort: e.target.value as AssetFilters["sort"] })
+          }
           className="input-new w-auto text-xs py-2 px-3 rounded-full"
         >
-          {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {SORT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
         </select>
 
         {/* Energy type pills */}
         <div className="flex items-center gap-2 flex-wrap">
-          {ENERGY_OPTIONS.map(o => (
+          {ENERGY_OPTIONS.map((o) => (
             <button
               key={o.value}
-              onClick={() => updateFilter({ energy_type: (o.value as EnergyType) || undefined })}
+              onClick={() =>
+                updateFilter({
+                  energy_type: (o.value as EnergyType) || undefined,
+                })
+              }
               className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${
                 (filters.energy_type ?? "") === o.value
                   ? "bg-[#9945FF]/10 text-[#9945FF] border-[#9945FF]/20"
                   : "border-[var(--border)] hover:border-[#9945FF]/20"
               }`}
-              style={(filters.energy_type ?? "") === o.value ? {} : { color: "var(--text-muted)" }}
+              style={
+                (filters.energy_type ?? "") === o.value
+                  ? {}
+                  : { color: "var(--text-muted)" }
+              }
             >
               {o.label}
             </button>
@@ -99,10 +134,18 @@ export default function AssetsPage() {
         {/* Status */}
         <select
           value={filters.status ?? ""}
-          onChange={e => updateFilter({ status: (e.target.value as AssetStatus) || undefined })}
+          onChange={(e) =>
+            updateFilter({
+              status: (e.target.value as AssetStatus) || undefined,
+            })
+          }
           className="input-new w-auto text-xs py-2 px-3 rounded-full"
         >
-          {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
         </select>
 
         {/* Clear */}
@@ -119,16 +162,22 @@ export default function AssetsPage() {
       {/* Grid */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 9 }).map((_, i) => <AssetCardSkeleton key={i} />)}
+          {Array.from({ length: 9 }).map((_, i) => (
+            <AssetCardSkeleton key={i} />
+          ))}
         </div>
       ) : assets.length === 0 ? (
         <EmptyState
-          title="No assets found"
-          description="Try adjusting your filters to see more results."
+          title={error ? "Assets unavailable" : "No assets found"}
+          description={
+            error || "Try adjusting your filters to see more results."
+          }
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {assets.map(a => <AssetCard key={a.id} asset={a} />)}
+          {assets.map((a) => (
+            <AssetCard key={a.id} asset={a} />
+          ))}
         </div>
       )}
 
@@ -137,23 +186,29 @@ export default function AssetsPage() {
         <div className="flex items-center justify-center gap-3 mt-10">
           <button
             disabled={!pagination || pagination.page <= 1}
-            onClick={() => setFilters(f => ({ ...f, page: (f.page ?? 1) - 1 }))}
+            onClick={() =>
+              setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))
+            }
             className="p-2 rounded-full border disabled:opacity-40 transition-colors hover:border-[#9945FF]/40"
             style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
 
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <button
               key={p}
-              onClick={() => setFilters(f => ({ ...f, page: p }))}
+              onClick={() => setFilters((f) => ({ ...f, page: p }))}
               className={`w-9 h-9 rounded-full text-sm font-bold transition-all ${
                 pagination?.page === p
                   ? "sol-gradient text-white"
                   : "border hover:border-[#9945FF]/40"
               }`}
-              style={pagination?.page === p ? {} : { borderColor: "var(--border)", color: "var(--text-muted)" }}
+              style={
+                pagination?.page === p
+                  ? {}
+                  : { borderColor: "var(--border)", color: "var(--text-muted)" }
+              }
             >
               {p}
             </button>
@@ -161,7 +216,9 @@ export default function AssetsPage() {
 
           <button
             disabled={!pagination || pagination.page >= totalPages}
-            onClick={() => setFilters(f => ({ ...f, page: (f.page ?? 1) + 1 }))}
+            onClick={() =>
+              setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))
+            }
             className="p-2 rounded-full border disabled:opacity-40 transition-colors hover:border-[#9945FF]/40"
             style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
           >
@@ -172,15 +229,3 @@ export default function AssetsPage() {
     </div>
   );
 }
-
-const MOCK_ASSETS: AssetListItem[] = [
-  { id: "asset-1", title: "Almaty Solar Farm A",    energy_type: "solar",       capacity_kw: 150, status: "active_sale", price_per_share_usdc: 10, expected_annual_yield_percent: 13.2 },
-  { id: "asset-2", title: "Nur-Sultan Rooftop B",   energy_type: "solar",       capacity_kw: 80,  status: "active_sale", price_per_share_usdc: 5,  expected_annual_yield_percent: 11.8 },
-  { id: "asset-3", title: "Shymkent Wind Park",     energy_type: "wind",        capacity_kw: 300, status: "active_sale", price_per_share_usdc: 25, expected_annual_yield_percent: 14.5 },
-  { id: "asset-4", title: "Astana EV Hub",          energy_type: "ev_charging", capacity_kw: 50,  status: "verified",    price_per_share_usdc: 15, expected_annual_yield_percent: 9.4  },
-  { id: "asset-5", title: "Karaganda Solar Fields", energy_type: "solar",       capacity_kw: 200, status: "funded",      price_per_share_usdc: 10, expected_annual_yield_percent: 12.1 },
-  { id: "asset-6", title: "Atyrau Hydro Station",   energy_type: "hydro",       capacity_kw: 500, status: "active_sale", price_per_share_usdc: 50, expected_annual_yield_percent: 10.5 },
-  { id: "asset-7", title: "Taraz Solar Micro-Grid", energy_type: "solar",       capacity_kw: 60,  status: "active_sale", price_per_share_usdc: 8,  expected_annual_yield_percent: 12.8 },
-  { id: "asset-8", title: "Semey Wind Cluster",     energy_type: "wind",        capacity_kw: 450, status: "verified",    price_per_share_usdc: 30, expected_annual_yield_percent: 15.0 },
-  { id: "asset-9", title: "Aktobe Rooftop Array",   energy_type: "solar",       capacity_kw: 90,  status: "active_sale", price_per_share_usdc: 7,  expected_annual_yield_percent: 11.2 },
-];

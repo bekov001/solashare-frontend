@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { assetsApi, issuerApi } from "@/lib/api";
+import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/lib/auth";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ENERGY_META, formatUSDC, formatNumber } from "@/lib/utils";
@@ -12,44 +13,58 @@ import { ArrowLeft, Send, Plus, RefreshCw, ExternalLink, FileText } from "lucide
 
 export default function ManageAssetPage() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
-  const router   = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
 
-  const [asset, setAsset]     = useState<AssetDetail | null>(null);
+  const [asset, setAsset] = useState<AssetDetail | null>(null);
   const [revenue, setRevenue] = useState<RevenueEpoch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [msg, setMsg]         = useState("");
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
 
-  // Revenue epoch form
   const [showEpoch, setShowEpoch] = useState(false);
-  const [epoch, setEpoch]         = useState({
-    epoch_number: "1", period_start: "", period_end: "",
-    gross_revenue_usdc: "", net_revenue_usdc: "", distributable_revenue_usdc: "",
-    report_uri: "", report_hash: "", source_type: "operator_statement",
+  const [epoch, setEpoch] = useState({
+    epoch_number: "1",
+    period_start: "",
+    period_end: "",
+    gross_revenue_usdc: "",
+    net_revenue_usdc: "",
+    distributable_revenue_usdc: "",
+    report_uri: "",
+    report_hash: "",
+    source_type: "operator_statement",
   });
   const [savingEpoch, setSavingEpoch] = useState(false);
-  const [submitting, setSubmitting]   = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
-    Promise.allSettled([
-      assetsApi.get(id),
-      assetsApi.revenue(id),
-    ]).then(([a, r]) => {
-      setAsset(a.status === "fulfilled" ? a.value : MOCK_ASSET);
-      setRevenue(r.status === "fulfilled" ? r.value.items : []);
-    }).finally(() => setLoading(false));
+
+    setError("");
+
+    Promise.all([assetsApi.get(id), assetsApi.revenue(id).catch(() => ({ items: [] }))])
+      .then(([assetRes, revenueRes]) => {
+        setAsset(assetRes);
+        setRevenue(revenueRes.items);
+      })
+      .catch((err) => {
+        setAsset(null);
+        setError(err instanceof Error ? err.message : "Failed to load asset.");
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   async function handleSubmit() {
     if (!asset) return;
+
     setSubmitting(true);
+    setMsg("");
+
     try {
       const res = await issuerApi.submit(asset.id);
       setMsg(`Asset submitted → ${res.next_status}`);
-      setAsset(prev => prev ? { ...prev, status: res.next_status as AssetDetail["status"] } : null);
-    } catch {
-      setMsg("Demo: Submit simulated.");
+      setAsset((prev) => (prev ? { ...prev, status: res.next_status as AssetDetail["status"] } : null));
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Failed to submit asset.");
     } finally {
       setSubmitting(false);
     }
@@ -58,32 +73,52 @@ export default function ManageAssetPage() {
   async function handleCreateEpoch(e: React.FormEvent) {
     e.preventDefault();
     if (!asset) return;
+
     setSavingEpoch(true);
+
     try {
       const res = await issuerApi.createRevenueEpoch(asset.id, {
-        epoch_number:              parseInt(epoch.epoch_number),
-        period_start:              epoch.period_start,
-        period_end:                epoch.period_end,
-        gross_revenue_usdc:        parseFloat(epoch.gross_revenue_usdc),
-        net_revenue_usdc:          parseFloat(epoch.net_revenue_usdc),
+        epoch_number: parseInt(epoch.epoch_number),
+        period_start: epoch.period_start,
+        period_end: epoch.period_end,
+        gross_revenue_usdc: parseFloat(epoch.gross_revenue_usdc),
+        net_revenue_usdc: parseFloat(epoch.net_revenue_usdc),
         distributable_revenue_usdc: parseFloat(epoch.distributable_revenue_usdc),
-        report_uri:                epoch.report_uri,
-        report_hash:               epoch.report_hash,
-        source_type:               epoch.source_type,
+        report_uri: epoch.report_uri,
+        report_hash: epoch.report_hash,
+        source_type: epoch.source_type,
       });
+
       setMsg(`Revenue epoch ${res.revenue_epoch_id} created.`);
       setShowEpoch(false);
-      // refresh revenue
-      assetsApi.revenue(asset.id).then(r => setRevenue(r.items)).catch(() => {});
-    } catch {
-      setMsg("Demo: Revenue epoch created.");
-      setShowEpoch(false);
+      assetsApi.revenue(asset.id).then((r) => setRevenue(r.items)).catch(() => setRevenue([]));
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Failed to create revenue epoch.");
     } finally {
       setSavingEpoch(false);
     }
   }
 
-  if (loading) {
+  if (!user) {
+    return (
+      <div className="max-w-xl mx-auto px-6 py-24 text-center animate-fade-in">
+        <p className="text-slate-500 mb-6">Sign in as an issuer to manage assets.</p>
+        <Link href="/login" className="btn-primary">
+          Go to Login
+        </Link>
+      </div>
+    );
+  }
+
+  if (user.role !== "issuer") {
+    return (
+      <div className="max-w-xl mx-auto px-6 py-24 text-center" style={{ color: "var(--text-muted)" }}>
+        Access restricted to issuers.
+      </div>
+    );
+  }
+
+  if (authLoading || loading) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-10 space-y-5 animate-pulse">
         <div className="h-5 bg-surface-200/40 rounded w-32" />
@@ -93,7 +128,13 @@ export default function ManageAssetPage() {
     );
   }
 
-  if (!asset) return <div className="max-w-4xl mx-auto px-6 py-20 text-center text-slate-500">Asset not found.</div>;
+  if (!asset) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-20">
+        <EmptyState title="Asset unavailable" description={error || "Asset not found."} />
+      </div>
+    );
+  }
 
   const energy = ENERGY_META[asset.energy_type];
   const canSubmit = asset.status === "draft" || asset.status === "verified";
@@ -104,7 +145,6 @@ export default function ManageAssetPage() {
         <ArrowLeft className="w-4 h-4" /> Back to dashboard
       </Link>
 
-      {/* Asset header */}
       <div className="glass-card p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -127,19 +167,15 @@ export default function ManageAssetPage() {
         </div>
       </div>
 
-      {/* Feedback */}
-      {msg && (
-        <div className="rounded-xl bg-sky-950/30 border border-sky-900/50 px-5 py-3 text-sm text-sky-300">{msg}</div>
-      )}
+      {msg && <div className="rounded-xl bg-sky-950/30 border border-sky-900/50 px-5 py-3 text-sm text-sky-300">{msg}</div>}
 
-      {/* Asset details */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Energy Type",    val: energy.label },
-          { label: "Capacity",       val: `${formatNumber(asset.capacity_kw)} kW` },
-          { label: "Expected APY",   val: `${asset.expected_annual_yield_percent}%` },
+          { label: "Energy Type", val: energy.label },
+          { label: "Capacity", val: `${formatNumber(asset.capacity_kw)} kW` },
+          { label: "Expected APY", val: asset.expected_annual_yield_percent === null ? "TBD" : `${asset.expected_annual_yield_percent}%` },
           { label: "Revenue Epochs", val: String(asset.revenue_summary.total_epochs) },
-        ].map(s => (
+        ].map((s) => (
           <div key={s.label} className="glass-card p-4 text-center">
             <p className="text-slate-100 font-bold text-lg">{s.val}</p>
             <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
@@ -147,29 +183,25 @@ export default function ManageAssetPage() {
         ))}
       </div>
 
-      {/* Sale terms */}
-      {asset.sale_terms && (
-        <div className="glass-card p-6">
-          <h2 className="font-bold text-slate-100 mb-4">Sale Terms</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
-            {[
-              { label: "Valuation",     val: formatUSDC(parseFloat(asset.sale_terms.valuation_usdc)) },
-              { label: "Total Shares",  val: formatNumber(asset.sale_terms.total_shares) },
-              { label: "Price / Share", val: formatUSDC(parseFloat(asset.sale_terms.price_per_share_usdc)) },
-              { label: "Min. Buy",      val: formatUSDC(parseFloat(asset.sale_terms.minimum_buy_amount_usdc)) },
-              { label: "Target Raise",  val: formatUSDC(parseFloat(asset.sale_terms.target_raise_usdc)) },
-              { label: "Sale Status",   val: asset.sale_terms.sale_status },
-            ].map(row => (
-              <div key={row.label} className="flex justify-between border-b border-surface-200/30 pb-2">
-                <span className="text-slate-500">{row.label}</span>
-                <span className="text-slate-200 font-medium">{row.val}</span>
-              </div>
-            ))}
-          </div>
+      <div className="glass-card p-6">
+        <h2 className="font-bold text-slate-100 mb-4">Sale Terms</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
+          {[
+            { label: "Valuation", val: formatUSDC(parseFloat(asset.sale_terms.valuation_usdc)) },
+            { label: "Total Shares", val: formatNumber(asset.sale_terms.total_shares) },
+            { label: "Price / Share", val: formatUSDC(parseFloat(asset.sale_terms.price_per_share_usdc)) },
+            { label: "Min. Buy", val: formatUSDC(parseFloat(asset.sale_terms.minimum_buy_amount_usdc)) },
+            { label: "Target Raise", val: formatUSDC(parseFloat(asset.sale_terms.target_raise_usdc)) },
+            { label: "Sale Status", val: asset.sale_terms.sale_status },
+          ].map((row) => (
+            <div key={row.label} className="flex justify-between border-b border-surface-200/30 pb-2">
+              <span className="text-slate-500">{row.label}</span>
+              <span className="text-slate-200 font-medium">{row.val}</span>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* Revenue epochs */}
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-bold text-slate-100">Revenue Epochs</h2>
@@ -181,19 +213,18 @@ export default function ManageAssetPage() {
         {showEpoch && (
           <form onSubmit={handleCreateEpoch} className="mb-6 p-5 rounded-xl border border-emerald-900/50 bg-emerald-950/20 space-y-4">
             <h3 className="font-semibold text-emerald-400 text-sm">New Revenue Epoch</h3>
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label-text block mb-1.5">Epoch #</label>
-                <input required type="number" min="1" className="input-field text-sm py-2"
-                  value={epoch.epoch_number} onChange={e => setEpoch(p => ({ ...p, epoch_number: e.target.value }))} />
+                <input required type="number" min="1" className="input-field text-sm py-2" value={epoch.epoch_number} onChange={(e) => setEpoch((p) => ({ ...p, epoch_number: e.target.value }))} />
               </div>
               <div>
                 <label className="label-text block mb-1.5">Source Type</label>
-                <select className="input-field text-sm py-2"
-                  value={epoch.source_type} onChange={e => setEpoch(p => ({ ...p, source_type: e.target.value }))}>
-                  {["manual_report","meter_export","operator_statement"].map(s => (
-                    <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+                <select className="input-field text-sm py-2" value={epoch.source_type} onChange={(e) => setEpoch((p) => ({ ...p, source_type: e.target.value }))}>
+                  {["manual_report", "meter_export", "operator_statement"].map((s) => (
+                    <option key={s} value={s}>
+                      {s.replace(/_/g, " ")}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -202,31 +233,40 @@ export default function ManageAssetPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label-text block mb-1.5">Period Start</label>
-                <input required type="date" className="input-field text-sm py-2"
-                  value={epoch.period_start} onChange={e => setEpoch(p => ({ ...p, period_start: e.target.value }))} />
+                <input required type="date" className="input-field text-sm py-2" value={epoch.period_start} onChange={(e) => setEpoch((p) => ({ ...p, period_start: e.target.value }))} />
               </div>
               <div>
                 <label className="label-text block mb-1.5">Period End</label>
-                <input required type="date" className="input-field text-sm py-2"
-                  value={epoch.period_end} onChange={e => setEpoch(p => ({ ...p, period_end: e.target.value }))} />
+                <input required type="date" className="input-field text-sm py-2" value={epoch.period_end} onChange={(e) => setEpoch((p) => ({ ...p, period_end: e.target.value }))} />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              {["gross_revenue_usdc","net_revenue_usdc","distributable_revenue_usdc"].map(field => (
+              {["gross_revenue_usdc", "net_revenue_usdc", "distributable_revenue_usdc"].map((field) => (
                 <div key={field}>
-                  <label className="label-text block mb-1.5">{field.replace(/_usdc|_/g, s => s === "_usdc" ? "" : " ").trim()}</label>
-                  <input required type="number" min="0" step="0.01" className="input-field text-sm py-2" placeholder="0.00"
+                  <label className="label-text block mb-1.5">{field.replace(/_usdc|_/g, (s) => (s === "_usdc" ? "" : " ")).trim()}</label>
+                  <input
+                    required
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="input-field text-sm py-2"
+                    placeholder="0.00"
                     value={(epoch as Record<string, string>)[field]}
-                    onChange={e => setEpoch(p => ({ ...p, [field]: e.target.value }))} />
+                    onChange={(e) => setEpoch((p) => ({ ...p, [field]: e.target.value }))}
+                  />
                 </div>
               ))}
             </div>
 
             <div>
               <label className="label-text block mb-1.5">Report URI</label>
-              <input className="input-field text-sm py-2" placeholder="https://arweave.net/..."
-                value={epoch.report_uri} onChange={e => setEpoch(p => ({ ...p, report_uri: e.target.value }))} />
+              <input className="input-field text-sm py-2" placeholder="https://arweave.net/..." value={epoch.report_uri} onChange={(e) => setEpoch((p) => ({ ...p, report_uri: e.target.value }))} />
+            </div>
+
+            <div>
+              <label className="label-text block mb-1.5">Report Hash</label>
+              <input className="input-field text-sm py-2" placeholder="sha256:..." value={epoch.report_hash} onChange={(e) => setEpoch((p) => ({ ...p, report_hash: e.target.value }))} />
             </div>
 
             <div className="flex gap-3">
@@ -242,7 +282,7 @@ export default function ManageAssetPage() {
           <p className="text-sm text-slate-500">No revenue epochs posted yet.</p>
         ) : (
           <div className="space-y-3">
-            {revenue.map(r => (
+            {revenue.map((r) => (
               <div key={r.id} className="flex items-center justify-between p-4 rounded-xl border border-surface-200/40">
                 <div>
                   <p className="text-sm font-semibold text-slate-200">Epoch #{r.epoch_number}</p>
@@ -258,7 +298,6 @@ export default function ManageAssetPage() {
         )}
       </div>
 
-      {/* Documents */}
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-slate-100">Documents</h2>
@@ -267,17 +306,16 @@ export default function ManageAssetPage() {
           <p className="text-sm text-slate-500">No documents uploaded.</p>
         ) : (
           <div className="space-y-2">
-            {asset.public_documents.map(doc => (
+            {asset.public_documents.map((doc) => (
               <div key={doc.id} className="flex items-center justify-between p-3 rounded-xl border border-surface-200/40">
                 <div className="flex items-center gap-3">
                   <FileText className="w-4 h-4 text-emerald-500" />
                   <div>
                     <p className="text-sm text-slate-200">{doc.title}</p>
-                    <p className="text-xs text-slate-500 capitalize">{doc.type.replace(/_/g," ")} · {doc.storage_provider}</p>
+                    <p className="text-xs text-slate-500 capitalize">{doc.type.replace(/_/g, " ")} · {doc.storage_provider}</p>
                   </div>
                 </div>
-                <a href={doc.storage_uri} target="_blank" rel="noopener noreferrer"
-                   className="p-1.5 rounded-lg hover:bg-white/5 text-slate-500 hover:text-emerald-400">
+                <a href={doc.storage_uri} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:bg-white/5 text-slate-500 hover:text-emerald-400">
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
@@ -288,24 +326,3 @@ export default function ManageAssetPage() {
     </div>
   );
 }
-
-const MOCK_ASSET: AssetDetail = {
-  id: "asset-1", slug: "almaty-solar-farm-a",
-  title: "Almaty Solar Farm A",
-  short_description: "Yield-bearing solar farm in the Almaty region.",
-  full_description: "150 kW solar installation with a 15-year PPA.",
-  energy_type: "solar", status: "active_sale",
-  location: { country: "Kazakhstan", region: "Almaty Region", city: "Almaty" },
-  capacity_kw: 150, currency: "USDC", expected_annual_yield_percent: 13.2,
-  issuer: { id: "issuer-1", display_name: "SolaShare Issuer LLC" },
-  sale_terms: {
-    valuation_usdc: "100000.000000", total_shares: 10000,
-    price_per_share_usdc: "10.000000", minimum_buy_amount_usdc: "50.000000",
-    target_raise_usdc: "50000.000000", sale_status: "live",
-  },
-  public_documents: [
-    { id: "d1", type: "technical_passport", title: "Technical Passport", storage_provider: "arweave", storage_uri: "#", content_hash: "sha256:abc", is_public: true },
-  ],
-  revenue_summary: { total_epochs: 3, last_posted_epoch: 3 },
-  onchain_refs: { onchain_asset_pubkey: null, share_mint_pubkey: null, vault_pubkey: null },
-};
