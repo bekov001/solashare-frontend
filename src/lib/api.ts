@@ -22,6 +22,7 @@ import type {
   PreparedTransactionResponse,
   PresignedUpload,
   RevenueEpoch,
+  TelegramAuthPreview,
   TransactionKind,
   VerificationOutcome,
   WalletChallengeResponse,
@@ -147,11 +148,27 @@ export const authApi = {
       body: JSON.stringify(data),
     }),
 
+  telegramPreview: (telegram_init_data: string): Promise<TelegramAuthPreview> =>
+    request("/auth/telegram/preview", {
+      method: "POST",
+      body: JSON.stringify({ telegram_init_data }),
+    }),
+
   telegram: (telegram_init_data: string): Promise<AuthResponse> =>
     request("/auth/telegram", {
       method: "POST",
       body: JSON.stringify({ telegram_init_data }),
     }),
+
+  linkPassword: (email: string, password: string) =>
+    request<{ success: true; user: AuthResponse["user"] }>(
+      "/auth/password/link",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      },
+      true,
+    ),
 
   linkWallet: (wallet_address: string, signed_message: string) =>
     request<{ success: boolean }>(

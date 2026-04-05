@@ -1,10 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
-import { authApi } from "@/lib/api";
 import { Mail, Wallet } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { authApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import type { TelegramAuthPreview } from "@/types";
+
+type TelegramWindow = Window & {
+  Telegram?: {
+    WebApp?: {
+      initData?: string;
+      ready?: () => void;
+    };
+  };
+};
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -14,7 +25,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [emailLoading, setEmailLoading] = useState(false);
-  const [telegramData, setTelegramData] = useState("");
+  const [telegramInitData, setTelegramInitData] = useState<string | null>(null);
+  const [telegramPreview, setTelegramPreview] = useState<TelegramAuthPreview | null>(null);
+  const [telegramPreviewLoading, setTelegramPreviewLoading] = useState(true);
   const [telegramLoading, setTelegramLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,6 +36,34 @@ export default function LoginPage() {
     if (role === "admin") return "/admin";
     return "/portfolio";
   }
+
+  useEffect(() => {
+    const telegram = (window as TelegramWindow).Telegram?.WebApp;
+    const initData = telegram?.initData?.trim();
+
+    telegram?.ready?.();
+
+    if (!initData) {
+      setTelegramInitData(null);
+      setTelegramPreview(null);
+      setTelegramPreviewLoading(false);
+      return;
+    }
+
+    setTelegramInitData(initData);
+    setTelegramPreviewLoading(true);
+
+    authApi
+      .telegramPreview(initData)
+      .then((preview) => {
+        setTelegramPreview(preview);
+      })
+      .catch((err) => {
+        setTelegramPreview(null);
+        setError(err instanceof Error ? err.message : "Failed to validate Telegram session.");
+      })
+      .finally(() => setTelegramPreviewLoading(false));
+  }, []);
 
   async function handleEmailAuth(e: React.FormEvent) {
     e.preventDefault();
@@ -44,17 +85,20 @@ export default function LoginPage() {
     }
   }
 
-  async function handleTelegramLogin(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleTelegramLogin() {
+    if (!telegramInitData) {
+      return;
+    }
+
     setTelegramLoading(true);
     setError("");
 
     try {
-      const res = await authApi.telegram(telegramData);
+      const res = await authApi.telegram(telegramInitData);
       login(res);
       router.push(getRedirectPath(res.user.role));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid Telegram init data.");
+      setError(err instanceof Error ? err.message : "Telegram sign-in failed.");
     } finally {
       setTelegramLoading(false);
     }
@@ -65,7 +109,10 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-3xl sol-gradient flex items-center justify-center mx-auto mb-5 sol-glow">
-            <span className="material-symbols-outlined text-3xl text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span
+              className="material-symbols-outlined text-3xl text-white"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
               solar_power
             </span>
           </div>
@@ -105,8 +152,11 @@ export default function LoginPage() {
           <form onSubmit={handleEmailAuth} className="space-y-4">
             {mode === "register" && (
               <div>
-                <label className="label-xs block mb-2">Display Name</label>
+                <label htmlFor="display-name" className="label-xs block mb-2">
+                  Display Name
+                </label>
                 <input
+                  id="display-name"
                   className="input-new"
                   placeholder="Your name"
                   value={displayName}
@@ -116,8 +166,11 @@ export default function LoginPage() {
               </div>
             )}
             <div>
-              <label className="label-xs block mb-2">Email</label>
+              <label htmlFor="email" className="label-xs block mb-2">
+                Email
+              </label>
               <input
+                id="email"
                 className="input-new"
                 placeholder="name@example.com"
                 type="email"
@@ -127,8 +180,11 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="label-xs block mb-2">Password</label>
+              <label htmlFor="password" className="label-xs block mb-2">
+                Password
+              </label>
               <input
+                id="password"
                 className="input-new"
                 placeholder={mode === "login" ? "Your password" : "Minimum 8 characters"}
                 type="password"
@@ -139,38 +195,122 @@ export default function LoginPage() {
             </div>
             {error && <p className="text-red-400 text-xs font-medium">{error}</p>}
             <button type="submit" disabled={emailLoading} className="btn-sol w-full text-sm">
-              {emailLoading ? "Processing…" : mode === "login" ? "Sign in with Email" : "Create Account"}
+              {emailLoading
+                ? "Processing…"
+                : mode === "login"
+                  ? "Sign in with Email"
+                  : "Create Account"}
             </button>
           </form>
         </div>
 
-        <div className="card p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Wallet className="w-4 h-4 text-[#9945FF]" />
-            <h2 className="font-bold text-sm" style={{ color: "var(--text)" }}>
-              Telegram WebApp Auth
-            </h2>
-          </div>
-          <form onSubmit={handleTelegramLogin} className="space-y-4">
-            <div>
-              <label className="label-xs block mb-2">Telegram Init Data</label>
-              <textarea
-                rows={3}
-                className="input-new resize-none text-xs font-mono"
-                placeholder="Paste your Telegram WebApp initData here…"
-                value={telegramData}
-                onChange={(e) => setTelegramData(e.target.value)}
-              />
+        {telegramInitData ? (
+          <div className="card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Wallet className="w-4 h-4 text-[#9945FF]" />
+              <h2 className="font-bold text-sm" style={{ color: "var(--text)" }}>
+                Telegram Mini App
+              </h2>
             </div>
-            <button
-              type="submit"
-              disabled={!telegramData || telegramLoading}
-              className="btn-sol w-full text-sm"
-            >
-              {telegramLoading ? "Verifying…" : "Sign in with Telegram"}
-            </button>
-          </form>
-        </div>
+
+            {telegramPreviewLoading ? (
+              <div className="space-y-3">
+                <div
+                  className="h-5 w-32 rounded-full animate-pulse"
+                  style={{ background: "var(--surface-low)" }}
+                />
+                <div
+                  className="h-20 rounded-3xl animate-pulse"
+                  style={{ background: "var(--surface-low)" }}
+                />
+              </div>
+            ) : telegramPreview ? (
+              <div className="space-y-4">
+                <div
+                  className="rounded-[1.5rem] border p-4"
+                  style={{
+                    background: "var(--surface-low)",
+                    borderColor: "var(--border)",
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {telegramPreview.telegram_user.photo_url ? (
+                      <div className="relative h-12 w-12 overflow-hidden rounded-2xl">
+                        <Image
+                          src={telegramPreview.telegram_user.photo_url}
+                          alt={telegramPreview.telegram_user.display_name}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className="flex h-12 w-12 items-center justify-center rounded-2xl font-black text-white"
+                        style={{ background: "linear-gradient(135deg, #9945FF, #14F195)" }}
+                      >
+                        TG
+                      </div>
+                    )}
+
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold" style={{ color: "var(--text)" }}>
+                        {telegramPreview.telegram_user.display_name}
+                      </p>
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                        {telegramPreview.telegram_user.telegram_username
+                          ? `@${telegramPreview.telegram_user.telegram_username}`
+                          : `Telegram ID ${telegramPreview.telegram_user.telegram_user_id}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-sm" style={{ color: "var(--text-muted)" }}>
+                    {telegramPreview.suggested_action === "login"
+                      ? `Найден аккаунт ${telegramPreview.existing_account?.display_name ?? "SolaShare User"}. Войдите через Telegram, чтобы открыть его.`
+                      : "Telegram аккаунт подтверждён. Можно создать новый профиль и продолжить вход через Telegram."}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={telegramLoading}
+                  onClick={handleTelegramLogin}
+                  className="btn-sol w-full text-sm"
+                >
+                  {telegramLoading
+                    ? "Checking…"
+                    : telegramPreview.suggested_action === "login"
+                      ? "Sign in with Telegram"
+                      : "Create account with Telegram"}
+                </button>
+
+                <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+                  Остальные методы входа ниже остаются доступны. После входа через Telegram можно
+                  добавить email/password в профиле и заходить в тот же аккаунт из обычного
+                  браузера.
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Telegram session was detected, but it could not be validated.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="card p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Wallet className="w-4 h-4 text-[#9945FF]" />
+              <h2 className="font-bold text-sm" style={{ color: "var(--text)" }}>
+                Telegram Mini App
+              </h2>
+            </div>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              Telegram sign-in is available only inside the Telegram Mini App. In a regular browser,
+              use the other login methods on this page.
+            </p>
+          </div>
+        )}
 
         <div className="flex items-center gap-4">
           <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
@@ -181,7 +321,8 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs" style={{ color: "var(--text-faint)" }}>
-          Use email/password or Telegram Mini App payload from the real backend environment.
+          Email/password stays available everywhere. Telegram sign-in is only offered when the page
+          is opened inside Telegram.
         </p>
       </div>
     </div>

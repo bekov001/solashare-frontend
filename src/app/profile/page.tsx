@@ -1,23 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { ArrowUpRight, LogOut, Mail, ShieldCheck, UserCircle2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { FileDropInput } from "@/components/FileDropInput";
+import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { FileDropInput } from "@/components/FileDropInput";
 import { WalletSetupCard } from "@/components/WalletSetupCard";
-import { investorApi } from "@/lib/api";
+import { authApi, investorApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { uploadAvatarImage } from "@/lib/uploads";
 import type { AuthUser } from "@/types";
-import {
-  ArrowUpRight,
-  LogOut,
-  Mail,
-  ShieldCheck,
-  X,
-  UserCircle2,
-} from "lucide-react";
 
 export default function ProfilePage() {
   const { user, isLoading: authLoading, logout, refreshUser } = useAuth();
@@ -30,6 +23,13 @@ export default function ProfilePage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [passwordLinkForm, setPasswordLinkForm] = useState({
+    email: "",
+    password: "",
+  });
+  const [passwordLinkSaving, setPasswordLinkSaving] = useState(false);
+  const [passwordLinkError, setPasswordLinkError] = useState("");
+  const [passwordLinkMessage, setPasswordLinkMessage] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [dialogImage, setDialogImage] = useState<{
@@ -70,12 +70,14 @@ export default function ProfilePage() {
           bio: res.user.bio ?? "",
           avatar_url: res.user.avatar_url ?? "",
         });
+        setPasswordLinkForm((prev) => ({
+          ...prev,
+          email: res.user.email ?? prev.email,
+        }));
       })
       .catch((err) => {
         setProfile(null);
-        setError(
-          err instanceof Error ? err.message : "Failed to load profile.",
-        );
+        setError(err instanceof Error ? err.message : "Failed to load profile.");
       })
       .finally(() => setLoading(false));
   }, [user]);
@@ -105,11 +107,34 @@ export default function ProfilePage() {
       await refreshUser();
       setMessage("Profile updated.");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to update profile.",
-      );
+      setError(err instanceof Error ? err.message : "Failed to update profile.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleEnableBrowserLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordLinkSaving(true);
+    setPasswordLinkError("");
+    setPasswordLinkMessage("");
+
+    try {
+      const res = await authApi.linkPassword(
+        passwordLinkForm.email.trim(),
+        passwordLinkForm.password,
+      );
+
+      setProfile(res.user);
+      setPasswordLinkForm((prev) => ({ ...prev, password: "" }));
+      await refreshUser();
+      setPasswordLinkMessage(
+        "Browser login enabled. You can now sign in with email and password outside Telegram.",
+      );
+    } catch (err) {
+      setPasswordLinkError(err instanceof Error ? err.message : "Failed to enable browser login.");
+    } finally {
+      setPasswordLinkSaving(false);
     }
   }
 
@@ -119,10 +144,7 @@ export default function ProfilePage() {
         <div className="w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-6 sol-gradient">
           <UserCircle2 className="w-8 h-8 text-white" />
         </div>
-        <h1
-          className="text-3xl font-black mb-3"
-          style={{ color: "var(--text)" }}
-        >
+        <h1 className="text-3xl font-black mb-3" style={{ color: "var(--text)" }}>
           Sign in to manage your profile
         </h1>
         <p className="text-sm mb-8" style={{ color: "var(--text-muted)" }}>
@@ -150,16 +172,12 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-20">
-        <EmptyState
-          title="Profile unavailable"
-          description={error || "Unable to load profile."}
-        />
+        <EmptyState title="Profile unavailable" description={error || "Unable to load profile."} />
       </div>
     );
   }
 
-  const activeAvatar =
-    localAvatarPreview || form.avatar_url || profile.avatar_url;
+  const activeAvatar = localAvatarPreview || form.avatar_url || profile.avatar_url;
 
   return (
     <>
@@ -189,18 +207,12 @@ export default function ProfilePage() {
                     className="object-cover"
                   />
                 ) : (
-                  <UserCircle2
-                    className="w-8 h-8"
-                    style={{ color: "var(--text-muted)" }}
-                  />
+                  <UserCircle2 className="w-8 h-8" style={{ color: "var(--text-muted)" }} />
                 )}
               </button>
               <div>
                 <p className="label-xs mb-2">Profile</p>
-                <h1
-                  className="text-3xl font-black"
-                  style={{ color: "var(--text)" }}
-                >
+                <h1 className="text-3xl font-black" style={{ color: "var(--text)" }}>
                   {profile.display_name}
                 </h1>
                 <div
@@ -230,10 +242,7 @@ export default function ProfilePage() {
           <section className="card p-6">
             <div className="mb-5">
               <p className="label-xs mb-2">Account</p>
-              <h2
-                className="text-2xl font-black"
-                style={{ color: "var(--text)" }}
-              >
+              <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
                 Edit profile
               </h2>
             </div>
@@ -290,8 +299,11 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="label-xs mb-2 block">Display name</label>
+                <label htmlFor="profile-display-name" className="label-xs mb-2 block">
+                  Display name
+                </label>
                 <input
+                  id="profile-display-name"
                   className="input-new"
                   value={form.display_name}
                   onChange={(e) =>
@@ -305,14 +317,15 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="label-xs mb-2 block">Bio</label>
+                <label htmlFor="profile-bio" className="label-xs mb-2 block">
+                  Bio
+                </label>
                 <textarea
+                  id="profile-bio"
                   rows={4}
                   className="input-new resize-none"
                   value={form.bio}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, bio: e.target.value }))
-                  }
+                  onChange={(e) => setForm((prev) => ({ ...prev, bio: e.target.value }))}
                   placeholder="Tell investors or partners who you are."
                 />
               </div>
@@ -342,28 +355,102 @@ export default function ProfilePage() {
           </section>
 
           <section className="space-y-6">
+            {!profile.auth_providers.includes("password") && (
+              <div className="card p-6 space-y-5">
+                <div>
+                  <p className="label-xs mb-2">Browser access</p>
+                  <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
+                    Enable email login
+                  </h2>
+                </div>
+
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  This account currently signs in through Telegram. Add an email and password to
+                  open the same account from a regular browser later.
+                </p>
+
+                <form onSubmit={handleEnableBrowserLogin} className="space-y-4">
+                  <div>
+                    <label htmlFor="browser-login-email" className="label-xs mb-2 block">
+                      Email
+                    </label>
+                    <input
+                      id="browser-login-email"
+                      className="input-new"
+                      type="email"
+                      value={passwordLinkForm.email}
+                      onChange={(e) =>
+                        setPasswordLinkForm((prev) => ({
+                          ...prev,
+                          email: e.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="browser-login-password" className="label-xs mb-2 block">
+                      Password
+                    </label>
+                    <input
+                      id="browser-login-password"
+                      className="input-new"
+                      type="password"
+                      placeholder="Minimum 8 characters"
+                      value={passwordLinkForm.password}
+                      onChange={(e) =>
+                        setPasswordLinkForm((prev) => ({
+                          ...prev,
+                          password: e.target.value,
+                        }))
+                      }
+                      required
+                    />
+                  </div>
+
+                  {passwordLinkMessage && (
+                    <div
+                      className="rounded-2xl p-3 text-xs font-medium text-[#14F195]"
+                      style={{ background: "#14F19510" }}
+                    >
+                      {passwordLinkMessage}
+                    </div>
+                  )}
+
+                  {passwordLinkError && (
+                    <div
+                      className="rounded-2xl p-3 text-xs font-medium text-red-400"
+                      style={{ background: "rgba(248,113,113,0.1)" }}
+                    >
+                      {passwordLinkError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={passwordLinkSaving}
+                    className="btn-sol w-full justify-center"
+                  >
+                    {passwordLinkSaving ? "Enabling..." : "Enable browser login"}
+                  </button>
+                </form>
+              </div>
+            )}
+
             {profile.role === "investor" ? (
               <>
                 <div className="card p-6 space-y-5">
                   <div>
                     <p className="label-xs mb-2">KYC</p>
-                    <h2
-                      className="text-2xl font-black"
-                      style={{ color: "var(--text)" }}
-                    >
+                    <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
                       Verification status
                     </h2>
                   </div>
 
-                  <div
-                    className="rounded-2xl p-4"
-                    style={{ background: "var(--surface-low)" }}
-                  >
+                  <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
                     <div className="flex items-center justify-between gap-3">
-                      <span
-                        className="text-sm font-bold"
-                        style={{ color: "var(--text)" }}
-                      >
+                      <span className="text-sm font-bold" style={{ color: "var(--text)" }}>
                         Current status
                       </span>
                       <span
@@ -380,19 +467,12 @@ export default function ProfilePage() {
                         {profile.kyc_status ?? "not_started"}
                       </span>
                     </div>
-                    <p
-                      className="mt-2 text-sm"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      Upload or review your identity document on the dedicated
-                      KYC page.
+                    <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+                      Upload or review your identity document on the dedicated KYC page.
                     </p>
                   </div>
 
-                  <Link
-                    href="/kyc"
-                    className="btn-outline w-full justify-center"
-                  >
+                  <Link href="/kyc" className="btn-outline w-full justify-center">
                     Open KYC page
                     <ArrowUpRight className="w-4 h-4" />
                   </Link>
@@ -403,15 +483,11 @@ export default function ProfilePage() {
             ) : (
               <div className="card p-6">
                 <p className="label-xs mb-2">Investor Access</p>
-                <h2
-                  className="text-2xl font-black mb-3"
-                  style={{ color: "var(--text)" }}
-                >
+                <h2 className="text-2xl font-black mb-3" style={{ color: "var(--text)" }}>
                   No investor checks required
                 </h2>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  KYC and wallet binding are only needed for investor investment
-                  and claim flows.
+                  KYC and wallet binding are only needed for investor investment and claim flows.
                 </p>
               </div>
             )}
@@ -423,7 +499,19 @@ export default function ProfilePage() {
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md"
           style={{ background: "rgba(12, 15, 15, 0.55)" }}
-          onClick={() => setDialogImage(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Avatar preview"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setDialogImage(null);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
+              setDialogImage(null);
+            }
+          }}
         >
           <div
             className="relative w-full max-w-3xl overflow-hidden rounded-[2rem] border"
@@ -431,7 +519,7 @@ export default function ProfilePage() {
               background: "var(--surface)",
               borderColor: "var(--border)",
             }}
-            onClick={(e) => e.stopPropagation()}
+            role="document"
           >
             <button
               type="button"
@@ -446,10 +534,7 @@ export default function ProfilePage() {
             >
               <X className="w-4 h-4" />
             </button>
-            <div
-              className="relative aspect-square w-full"
-              style={{ background: "#050606" }}
-            >
+            <div className="relative aspect-square w-full" style={{ background: "#050606" }}>
               <Image
                 src={dialogImage.src}
                 alt={dialogImage.alt}

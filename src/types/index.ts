@@ -93,6 +93,23 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
+export interface TelegramAuthPreview {
+  suggested_action: "login" | "register";
+  telegram_user: {
+    telegram_user_id: string;
+    telegram_username: string | null;
+    display_name: string;
+    photo_url: string | null;
+  };
+  existing_account: {
+    user_id: string;
+    display_name: string;
+    avatar_url: string | null;
+    role: UserRole;
+    auth_providers: Array<"password" | "google" | "telegram">;
+  } | null;
+}
+
 // ─── Assets ───────────────────────────────────────────────────────────────────
 
 export interface AssetListItem {
