@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -19,6 +20,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <Script
+          src="https://telegram.org/js/telegram-web-app.js?61"
+          strategy="beforeInteractive"
+        />
+      </head>
       <body style={{ background: "var(--bg)" }} suppressHydrationWarning>
         <ThemeProvider>
           <AuthProvider>

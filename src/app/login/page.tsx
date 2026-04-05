@@ -12,6 +12,9 @@ type TelegramWindow = Window & {
   Telegram?: {
     WebApp?: {
       initData?: string;
+      initDataUnsafe?: {
+        user?: unknown;
+      };
       ready?: () => void;
     };
   };
@@ -40,10 +43,11 @@ export default function LoginPage() {
   useEffect(() => {
     const telegram = (window as TelegramWindow).Telegram?.WebApp;
     const initData = telegram?.initData?.trim();
+    const hasTelegramUser = Boolean(telegram?.initDataUnsafe?.user);
 
     telegram?.ready?.();
 
-    if (!initData) {
+    if (!initData || !hasTelegramUser) {
       setTelegramInitData(null);
       setTelegramPreview(null);
       setTelegramPreviewLoading(false);
@@ -297,20 +301,7 @@ export default function LoginPage() {
               </p>
             )}
           </div>
-        ) : (
-          <div className="card p-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Wallet className="w-4 h-4 text-[#9945FF]" />
-              <h2 className="font-bold text-sm" style={{ color: "var(--text)" }}>
-                Telegram Mini App
-              </h2>
-            </div>
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Telegram sign-in is available only inside the Telegram Mini App. In a regular browser,
-              use the other login methods on this page.
-            </p>
-          </div>
-        )}
+        ) : null}
 
         <div className="flex items-center gap-4">
           <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
