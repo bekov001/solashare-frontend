@@ -1,6 +1,8 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { assetsApi } from "@/lib/api";
 import { AssetCard, AssetCardSkeleton } from "@/components/AssetCard";
 import { EmptyState } from "@/components/EmptyState";
@@ -11,6 +13,8 @@ export default function HomePage() {
   const [assets, setAssets] = useState<AssetListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     assetsApi
@@ -22,44 +26,105 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const heroLogoSrc =
+    mounted && resolvedTheme === "light"
+      ? "/logo_grey_caption.svg"
+      : "/logo_white_caption.svg";
+
   return (
     <div className="max-w-[1440px] mx-auto px-8 animate-fade-in">
       {/* Hero */}
-      <section className="py-16 max-w-3xl">
-        <div
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold mb-8"
-          style={{
-            background: "var(--surface-low)",
-            color: "var(--text-muted)",
-          }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#14F195] animate-pulse" />
-          Live on Solana Devnet
-        </div>
-        <h1
-          className="text-6xl lg:text-7xl font-black tracking-tighter leading-[1.05] mb-6"
-          style={{ color: "var(--text)" }}
-        >
-          Invest in
-          <br />
-          <span className="sol-text">Solar Energy.</span>
-          <br />
-          Earn real yield.
-        </h1>
-        <p
-          className="text-lg max-w-xl leading-relaxed mb-10"
-          style={{ color: "var(--text-muted)" }}
-        >
-          SolaShare tokenizes revenue rights of real solar installations. Buy
-          fractional shares, claim yield on-chain — gasless.
-        </p>
-        <div className="flex flex-wrap gap-4">
-          <Link href="/assets" className="btn-sol text-base px-8 py-4">
-            Browse Assets <ArrowRight className="w-4 h-4" />
-          </Link>
-          <Link href="/portfolio" className="btn-dark text-base px-8 py-4">
-            My Portfolio
-          </Link>
+      <section className="py-16">
+        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,560px)_1fr]">
+          <div className="max-w-3xl">
+            <div
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold mb-8"
+              style={{
+                background: "var(--surface-low)",
+                color: "var(--text-muted)",
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#14F195] animate-pulse" />
+              Live on Solana Devnet
+            </div>
+            <h1
+              className="text-6xl lg:text-7xl font-black tracking-tighter leading-[1.05] mb-6"
+              style={{ color: "var(--text)" }}
+            >
+              Invest in
+              <br />
+              <span className="sol-text">Solar Energy.</span>
+              <br />
+              Earn real yield.
+            </h1>
+            <p
+              className="text-lg max-w-xl leading-relaxed mb-10"
+              style={{ color: "var(--text-muted)" }}
+            >
+              SolaShare tokenizes revenue rights of real solar installations.
+              Buy fractional shares, claim yield on-chain — gasless.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <Link href="/assets" className="btn-sol text-base px-8 py-4">
+                Browse Assets <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link href="/portfolio" className="btn-dark text-base px-8 py-4">
+                My Portfolio
+              </Link>
+            </div>
+          </div>
+
+          <div className="relative hidden min-h-[380px] lg:block">
+            <div className="flex h-full items-start justify-center pt-2 lg:justify-end lg:pr-2 xl:pr-8">
+              <div className="relative w-[400px] xl:w-[440px]">
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-x-10 top-14 h-[220px] rounded-full blur-3xl"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(20, 241, 149, 0.22) 0%, rgba(91, 190, 255, 0.16) 52%, rgba(153, 69, 255, 0.22) 100%)",
+                  }}
+                />
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-x-2 inset-y-4 rounded-[40px] border backdrop-blur-xl"
+                  style={{
+                    background:
+                      "linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 34%, rgba(255,255,255,0.01) 100%)",
+                    borderColor: "rgba(255, 255, 255, 0.08)",
+                    boxShadow:
+                      "0 30px 80px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+                  }}
+                />
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-x-20 top-10 h-16 rounded-full blur-2xl"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%)",
+                  }}
+                />
+                <div className="relative z-10 px-8 pb-8 pt-7">
+                  <Image
+                    src={heroLogoSrc}
+                    alt="SolaShare"
+                    width={420}
+                    height={267}
+                    priority
+                    className="h-auto w-full opacity-95"
+                    style={{
+                      filter:
+                        "drop-shadow(0 18px 40px rgba(20, 241, 149, 0.16)) drop-shadow(0 24px 48px rgba(153, 69, 255, 0.18))",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

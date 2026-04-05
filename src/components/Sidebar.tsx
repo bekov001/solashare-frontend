@@ -41,7 +41,7 @@ export function Sidebar() {
       className="hidden lg:flex flex-col w-64 fixed left-0 top-0 h-full pt-20 border-r z-40 transition-colors"
       style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
-      <nav className="flex-1 px-4 pt-4 space-y-1">
+      <nav className="flex-1 px-4 pt-2 space-y-1">
         {links.map((l) => {
           const active =
             l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
