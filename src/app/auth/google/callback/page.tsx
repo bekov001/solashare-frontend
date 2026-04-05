@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { authApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -17,7 +17,7 @@ function getRedirectPath(role: string) {
   return "/portfolio";
 }
 
-export default function GoogleCallbackPage() {
+function GoogleCallbackContent() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,5 +85,29 @@ export default function GoogleCallbackPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function GoogleCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[70vh] items-center justify-center px-4 py-16">
+          <div
+            className="w-full max-w-md rounded-[2rem] border p-8 text-center"
+            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+          >
+            <h1 className="mb-3 text-2xl font-black" style={{ color: "var(--text)" }}>
+              Google Sign-In
+            </h1>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              Preparing Google sign-in...
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <GoogleCallbackContent />
+    </Suspense>
   );
 }
