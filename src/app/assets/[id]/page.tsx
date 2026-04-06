@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { ArrowLeft, ExternalLink, FileText, MapPin, Shield, TrendingUp, Zap } from "lucide-react";
 import Link from "next/link";
-import { adminApi, assetsApi, investorApi, issuerApi } from "@/lib/api";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { InvestorSetupCard } from "@/components/InvestorSetupCard";
 import { StatusBadge } from "@/components/StatusBadge";
+import { adminApi, assetsApi, investorApi, issuerApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { sendPreparedTransaction } from "@/lib/solana";
 import {
   ENERGY_META,
-  formatUSDC,
-  formatPercent,
-  formatNumber,
   formatDate,
+  formatNumber,
+  formatPercent,
+  formatUSDC,
   shortAddress,
 } from "@/lib/utils";
 import type {
@@ -24,15 +25,6 @@ import type {
   IssuerAssetDetail,
   RevenueEpoch,
 } from "@/types";
-import {
-  ArrowLeft,
-  MapPin,
-  Zap,
-  TrendingUp,
-  FileText,
-  ExternalLink,
-  Shield,
-} from "lucide-react";
 
 type Tab = "overview" | "documents" | "revenue" | "holders";
 
@@ -121,13 +113,16 @@ export default function AssetDetailPage() {
     try {
       const res = await investorApi.prepare(asset.id, parseFloat(investAmount));
       const confirmation = await sendPreparedTransaction(res, "investment");
-      setInvestMsg(
-        `Investment submitted: ${confirmation.signature} (${confirmation.sync_status})`,
-      );
+      setInvestMsg(`Investment submitted: ${confirmation.signature} (${confirmation.sync_status})`);
     } catch (err) {
-      setInvestMsg(
-        err instanceof Error ? err.message : "Failed to prepare investment.",
-      );
+      console.error("Investment flow failed", {
+        assetId: asset.id,
+        investAmount,
+        errorMessage: err instanceof Error ? err.message : String(err),
+        errorStack: err instanceof Error ? err.stack : undefined,
+        error: err,
+      });
+      setInvestMsg(err instanceof Error ? err.message : "Failed to prepare investment.");
     } finally {
       setInvesting(false);
     }
@@ -138,10 +133,7 @@ export default function AssetDetailPage() {
   if (!asset) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-20">
-        <EmptyState
-          title="Asset unavailable"
-          description={error || "Asset not found."}
-        />
+        <EmptyState title="Asset unavailable" description={error || "Asset not found."} />
       </div>
     );
   }
@@ -195,10 +187,7 @@ export default function AssetDetailPage() {
                 </div>
                 <div>
                   <p className="label-xs">{energy.label}</p>
-                  <h1
-                    className="text-2xl font-black"
-                    style={{ color: "var(--text)" }}
-                  >
+                  <h1 className="text-2xl font-black" style={{ color: "var(--text)" }}>
                     {asset.title}
                   </h1>
                 </div>
@@ -206,21 +195,14 @@ export default function AssetDetailPage() {
               <StatusBadge status={asset.status} />
             </div>
 
-            <p
-              className="text-sm leading-relaxed mb-5"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <p className="text-sm leading-relaxed mb-5" style={{ color: "var(--text-muted)" }}>
               {asset.short_description}
             </p>
 
-            <div
-              className="flex flex-wrap gap-4 text-sm"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <div className="flex flex-wrap gap-4 text-sm" style={{ color: "var(--text-muted)" }}>
               <span className="flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-[#9945FF]" />
-                {asset.location.city ?? "Unknown city"},{" "}
-                {asset.location.country}
+                {asset.location.city ?? "Unknown city"}, {asset.location.country}
               </span>
               <span className="flex items-center gap-1.5">
                 <Zap className="w-3.5 h-3.5 text-[#14F195]" />
@@ -234,10 +216,7 @@ export default function AssetDetailPage() {
           </div>
 
           <div className="card overflow-hidden p-0">
-            <div
-              className="flex border-b"
-              style={{ borderColor: "var(--border)" }}
-            >
+            <div className="flex border-b" style={{ borderColor: "var(--border)" }}>
               {tabs.map((t) => (
                 <button
                   key={t.key}
@@ -258,26 +237,17 @@ export default function AssetDetailPage() {
               {tab === "overview" && (
                 <div className="space-y-5">
                   <div>
-                    <h3
-                      className="font-black mb-2"
-                      style={{ color: "var(--text)" }}
-                    >
+                    <h3 className="font-black mb-2" style={{ color: "var(--text)" }}>
                       About this asset
                     </h3>
-                    <p
-                      className="text-sm leading-relaxed"
-                      style={{ color: "var(--text-muted)" }}
-                    >
+                    <p className="text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
                       {asset.full_description}
                     </p>
                   </div>
 
                   {"onchain_refs" in asset && asset.onchain_refs.onchain_asset_pubkey && (
                     <div>
-                      <h3
-                        className="font-black mb-3"
-                        style={{ color: "var(--text)" }}
-                      >
+                      <h3 className="font-black mb-3" style={{ color: "var(--text)" }}>
                         On-chain references
                       </h3>
                       <div className="space-y-2">
@@ -295,21 +265,20 @@ export default function AssetDetailPage() {
                             val: asset.onchain_refs.vault_pubkey,
                           },
                         ]
-                          .filter((r) => r.val)
+                          .filter(
+                            (r): r is { label: string; val: string } => typeof r.val === "string",
+                          )
                           .map((r) => (
                             <div
                               key={r.label}
                               className="flex items-center justify-between p-3 rounded-2xl"
                               style={{ background: "var(--surface-low)" }}
                             >
-                              <span
-                                className="text-xs"
-                                style={{ color: "var(--text-muted)" }}
-                              >
+                              <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                                 {r.label}
                               </span>
                               <span className="font-mono text-xs text-[#9945FF]">
-                                {shortAddress(r.val!)}
+                                {shortAddress(r.val)}
                               </span>
                             </div>
                           ))}
@@ -322,10 +291,7 @@ export default function AssetDetailPage() {
               {tab === "documents" && (
                 <div className="space-y-3">
                   {visibleDocuments.length === 0 ? (
-                    <p
-                      className="text-sm"
-                      style={{ color: "var(--text-muted)" }}
-                    >
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                       No documents available yet.
                     </p>
                   ) : (
@@ -343,18 +309,14 @@ export default function AssetDetailPage() {
                             <FileText className="w-4 h-4 text-[#9945FF]" />
                           </div>
                           <div>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color: "var(--text)" }}
-                            >
+                            <p className="text-sm font-bold" style={{ color: "var(--text)" }}>
                               {doc.title}
                             </p>
                             <p
                               className="text-xs capitalize"
                               style={{ color: "var(--text-faint)" }}
                             >
-                              {doc.type.replace(/_/g, " ")} ·{" "}
-                              {doc.storage_provider}
+                              {doc.type.replace(/_/g, " ")} · {doc.storage_provider}
                             </p>
                           </div>
                         </div>
@@ -376,10 +338,7 @@ export default function AssetDetailPage() {
               {tab === "revenue" && (
                 <div className="space-y-3">
                   {revenue.length === 0 ? (
-                    <p
-                      className="text-sm"
-                      style={{ color: "var(--text-muted)" }}
-                    >
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                       No revenue epochs posted yet.
                     </p>
                   ) : (
@@ -390,10 +349,7 @@ export default function AssetDetailPage() {
                         style={{ borderColor: "var(--border)" }}
                       >
                         <div className="flex items-center justify-between">
-                          <span
-                            className="text-sm font-black"
-                            style={{ color: "var(--text)" }}
-                          >
+                          <span className="text-sm font-black" style={{ color: "var(--text)" }}>
                             Epoch #{epoch.epoch_number}
                           </span>
                           <span
@@ -405,20 +361,14 @@ export default function AssetDetailPage() {
                                   : "bg-[var(--surface-low)]"
                             }`}
                             style={
-                              epoch.posting_status === "draft"
-                                ? { color: "var(--text-muted)" }
-                                : {}
+                              epoch.posting_status === "draft" ? { color: "var(--text-muted)" } : {}
                             }
                           >
                             {epoch.posting_status}
                           </span>
                         </div>
-                        <p
-                          className="text-xs"
-                          style={{ color: "var(--text-faint)" }}
-                        >
-                          {formatDate(epoch.period_start)} —{" "}
-                          {formatDate(epoch.period_end)}
+                        <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+                          {formatDate(epoch.period_start)} — {formatDate(epoch.period_end)}
                         </p>
                         <div className="grid grid-cols-3 gap-2">
                           {[
@@ -443,10 +393,7 @@ export default function AssetDetailPage() {
                               className="text-center p-2 rounded-xl"
                               style={{ background: "var(--surface-low)" }}
                             >
-                              <p
-                                className="text-xs mb-0.5"
-                                style={{ color: "var(--text-faint)" }}
-                              >
+                              <p className="text-xs mb-0.5" style={{ color: "var(--text-faint)" }}>
                                 {s.label}
                               </p>
                               <p
@@ -515,9 +462,7 @@ export default function AssetDetailPage() {
                 style={{ color: "var(--text-muted)" }}
               >
                 <span>Funded</span>
-                <span className="font-bold text-[#14F195]">
-                  {formatPercent(fundedPct)}
-                </span>
+                <span className="font-bold text-[#14F195]">{formatPercent(fundedPct)}</span>
               </div>
               <div
                 className="h-2 rounded-full overflow-hidden"
@@ -601,7 +546,8 @@ export default function AssetDetailPage() {
                   className="rounded-2xl px-4 py-3 text-xs font-medium"
                   style={{ background: "var(--surface-low)", color: "var(--text-muted)" }}
                 >
-                  Current asset status: {asset.status}. Current sale status: {saleTerms.sale_status}.
+                  Current asset status: {asset.status}. Current sale status: {saleTerms.sale_status}
+                  .
                 </div>
               </div>
             ) : !user ? (
@@ -610,8 +556,8 @@ export default function AssetDetailPage() {
                   Invest
                 </h3>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  Sign in with an investor account to complete KYC, link a
-                  wallet, and invest in this asset.
+                  Sign in with an investor account to complete KYC, link a wallet, and invest in
+                  this asset.
                 </p>
                 <Link href="/login" className="btn-sol w-full text-center">
                   Log In To Continue
@@ -655,19 +601,14 @@ export default function AssetDetailPage() {
                     style={{ background: "var(--surface-low)" }}
                   >
                     <div className="flex justify-between">
-                      <span style={{ color: "var(--text-muted)" }}>
-                        Shares to receive
-                      </span>
+                      <span style={{ color: "var(--text-muted)" }}>Shares to receive</span>
                       <span className="font-black text-[#14F195]">
                         {formatNumber(quote.shares_to_receive)}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span style={{ color: "var(--text-muted)" }}>Fees</span>
-                      <span
-                        className="font-medium"
-                        style={{ color: "var(--text)" }}
-                      >
+                      <span className="font-medium" style={{ color: "var(--text)" }}>
                         {formatUSDC(quote.fees_usdc)}
                       </span>
                     </div>
@@ -690,21 +631,14 @@ export default function AssetDetailPage() {
                 >
                   {investing ? "Preparing…" : "Invest Now"}
                 </button>
-                <p
-                  className="text-xs text-center"
-                  style={{ color: "var(--text-faint)" }}
-                >
-                  Prepared transaction is signed and sent via your Solana
-                  wallet.
+                <p className="text-xs text-center" style={{ color: "var(--text-faint)" }}>
+                  Prepared transaction is signed and sent via your Solana wallet.
                 </p>
               </div>
             ))}
 
           <div className="card p-5">
-            <h3
-              className="font-black text-sm mb-3"
-              style={{ color: "var(--text)" }}
-            >
+            <h3 className="font-black text-sm mb-3" style={{ color: "var(--text)" }}>
               Revenue Summary
             </h3>
             <div className="grid grid-cols-2 gap-3">
@@ -712,13 +646,8 @@ export default function AssetDetailPage() {
                 className="text-center p-3 rounded-2xl"
                 style={{ background: "var(--surface-low)" }}
               >
-                <p className="text-2xl font-black text-[#14F195]">
-                  {revenueSummary.total_epochs}
-                </p>
-                <p
-                  className="text-xs mt-0.5"
-                  style={{ color: "var(--text-faint)" }}
-                >
+                <p className="text-2xl font-black text-[#14F195]">{revenueSummary.total_epochs}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--text-faint)" }}>
                   Total Epochs
                 </p>
               </div>
@@ -729,10 +658,7 @@ export default function AssetDetailPage() {
                 <p className="text-2xl font-black text-[#9945FF]">
                   {revenueSummary.last_posted_epoch ?? "—"}
                 </p>
-                <p
-                  className="text-xs mt-0.5"
-                  style={{ color: "var(--text-faint)" }}
-                >
+                <p className="text-xs mt-0.5" style={{ color: "var(--text-faint)" }}>
                   Last Epoch
                 </p>
               </div>
@@ -747,21 +673,12 @@ export default function AssetDetailPage() {
 function AssetDetailSkeleton() {
   return (
     <div className="max-w-[1440px] mx-auto px-8 py-8 animate-pulse space-y-6">
-      <div
-        className="h-4 rounded-xl w-32"
-        style={{ background: "var(--surface-low)" }}
-      />
+      <div className="h-4 rounded-xl w-32" style={{ background: "var(--surface-low)" }} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-5">
           <div className="card p-7 space-y-4">
-            <div
-              className="h-6 rounded-xl w-1/2"
-              style={{ background: "var(--surface-low)" }}
-            />
-            <div
-              className="h-4 rounded-xl w-3/4"
-              style={{ background: "var(--surface-low)" }}
-            />
+            <div className="h-6 rounded-xl w-1/2" style={{ background: "var(--surface-low)" }} />
+            <div className="h-4 rounded-xl w-3/4" style={{ background: "var(--surface-low)" }} />
           </div>
           <div className="card h-64" />
         </div>

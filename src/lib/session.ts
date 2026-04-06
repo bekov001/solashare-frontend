@@ -41,7 +41,9 @@ export function getStoredSession(): StoredSession | null {
   };
 }
 
-export function storeSession(session: Pick<AuthResponse, "access_token" | "refresh_token" | "user">): void {
+export function storeSession(
+  session: Pick<AuthResponse, "access_token" | "refresh_token" | "user">,
+): void {
   if (typeof window === "undefined") {
     return;
   }

@@ -1,18 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { assetsApi } from "@/lib/api";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { AssetCard, AssetCardSkeleton } from "@/components/AssetCard";
 import { EmptyState } from "@/components/EmptyState";
-import type {
-  AssetFilters,
-  AssetListItem,
-  AssetStatus,
-  EnergyType,
-  Pagination,
-} from "@/types";
-import { ENERGY_META, STATUS_META } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { assetsApi } from "@/lib/api";
+import { ENERGY_META } from "@/lib/utils";
+import type { AssetFilters, AssetListItem, AssetStatus, EnergyType, Pagination } from "@/types";
 
 const ENERGY_OPTIONS: { value: EnergyType | ""; label: string }[] = [
   { value: "", label: "All Types" },
@@ -69,9 +63,7 @@ export default function AssetsPage() {
   const updateFilter = (patch: Partial<AssetFilters>) =>
     setFilters((f) => ({ ...f, ...patch, page: 1 }));
 
-  const totalPages = pagination
-    ? Math.ceil(pagination.total / (pagination.limit || 12))
-    : 1;
+  const totalPages = pagination ? Math.ceil(pagination.total / (pagination.limit || 12)) : 1;
 
   return (
     <div className="max-w-[1440px] mx-auto px-8 py-10 animate-fade-in">
@@ -93,9 +85,7 @@ export default function AssetsPage() {
         {/* Sort */}
         <select
           value={filters.sort ?? "newest"}
-          onChange={(e) =>
-            updateFilter({ sort: e.target.value as AssetFilters["sort"] })
-          }
+          onChange={(e) => updateFilter({ sort: e.target.value as AssetFilters["sort"] })}
           className="input-new w-auto text-xs py-2 px-3 rounded-full"
         >
           {SORT_OPTIONS.map((o) => (
@@ -120,11 +110,7 @@ export default function AssetsPage() {
                   ? "bg-[#9945FF]/10 text-[#9945FF] border-[#9945FF]/20"
                   : "border-[var(--border)] hover:border-[#9945FF]/20"
               }`}
-              style={
-                (filters.energy_type ?? "") === o.value
-                  ? {}
-                  : { color: "var(--text-muted)" }
-              }
+              style={(filters.energy_type ?? "") === o.value ? {} : { color: "var(--text-muted)" }}
             >
               {o.label}
             </button>
@@ -169,9 +155,7 @@ export default function AssetsPage() {
       ) : assets.length === 0 ? (
         <EmptyState
           title={error ? "Assets unavailable" : "No assets found"}
-          description={
-            error || "Try adjusting your filters to see more results."
-          }
+          description={error || "Try adjusting your filters to see more results."}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -186,9 +170,7 @@ export default function AssetsPage() {
         <div className="flex items-center justify-center gap-3 mt-10">
           <button
             disabled={!pagination || pagination.page <= 1}
-            onClick={() =>
-              setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))
-            }
+            onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}
             className="p-2 rounded-full border disabled:opacity-40 transition-colors hover:border-[#9945FF]/40"
             style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
           >
@@ -216,9 +198,7 @@ export default function AssetsPage() {
 
           <button
             disabled={!pagination || pagination.page >= totalPages}
-            onClick={() =>
-              setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))
-            }
+            onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}
             className="p-2 rounded-full border disabled:opacity-40 transition-colors hover:border-[#9945FF]/40"
             style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
           >

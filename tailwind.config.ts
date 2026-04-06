@@ -11,9 +11,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        "sol-green":       "#14F195",
-        "sol-purple":      "#9945FF",
-        "brand-primary":   "#00693e",
+        "sol-green": "#14F195",
+        "sol-purple": "#9945FF",
+        "brand-primary": "#00693e",
         "brand-secondary": "#7c1ae2",
       },
       fontFamily: {

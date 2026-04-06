@@ -1,9 +1,10 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import type React from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { authApi } from "@/lib/api";
-import type { AuthResponse, AuthUser } from "@/types";
 import { clearSession, getStoredSession, storeSession } from "@/lib/session";
+import type { AuthResponse, AuthUser } from "@/types";
 
 interface AuthContextValue {
   user: AuthUser | null;

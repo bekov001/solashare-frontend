@@ -1,8 +1,8 @@
 "use client";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import { Bolt, Home, Store, Wallet } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const ITEMS = [
   { href: "/", icon: Home, label: "Home" },
@@ -23,8 +23,7 @@ export function BottomNav() {
       style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
       {ITEMS.map((item, i) => {
-        const active =
-          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         const Icon = item.icon;
         return (
           <Link
@@ -36,9 +35,7 @@ export function BottomNav() {
             style={active ? {} : { color: "var(--text-faint)" }}
           >
             <Icon className="w-5 h-5" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">
-              {item.label}
-            </span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">{item.label}</span>
           </Link>
         );
       })}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
 import { FileUp } from "lucide-react";
+import { useId, useRef, useState } from "react";
 
 type FileDropInputProps = {
   accept?: string;
@@ -118,9 +118,7 @@ export function FileDropInput({
         {description}
       </p>
 
-      <span className="btn-outline mt-5 inline-flex">
-        {buttonLabel}
-      </span>
+      <span className="btn-outline mt-5 inline-flex">{buttonLabel}</span>
     </button>
   );
 }

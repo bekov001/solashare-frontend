@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
-import { issuerApi } from "@/lib/api";
+import { WalletSetupCard } from "@/components/WalletSetupCard";
+import { BASE, issuerApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { ensureWalletBound, sendIssuerTransaction } from "@/lib/solana";
 import { ENERGY_META, formatNumber, formatUSDC } from "@/lib/utils";
 import type { IssuerAssetListItem } from "@/types";
 
@@ -41,6 +43,26 @@ export default function IssuerPage() {
     setMsg("");
 
     try {
+      const targetAsset = assets.find((a) => a.id === assetId);
+
+      if (targetAsset?.status === "verified") {
+        setMsg("Preparing on-chain transaction...");
+        await ensureWalletBound();
+
+        const payload = await issuerApi.prepareOnchainSetup(assetId, {
+          // @ts-expect-error
+          metadata_uri: targetAsset.assetMetadataUri || `${BASE}/api/v1/assets/${assetId}/metadata`,
+        });
+
+        setMsg("Please sign the transaction in your wallet...");
+        const signature = await sendIssuerTransaction(payload);
+
+        setMsg("Confirming transaction on-chain...");
+        await issuerApi.confirmOnchainSetup(assetId, signature);
+
+        setMsg("Asset initialized on-chain. Submitting for sale activation...");
+      }
+
       const res = await issuerApi.submit(assetId);
       setMsg(`Asset submitted → ${res.next_status}`);
       setAssets((prev) =>
@@ -95,6 +117,12 @@ export default function IssuerPage() {
 
   return (
     <div className="max-w-[1440px] mx-auto px-8 py-10 animate-fade-in space-y-8">
+      {!user.wallet_address && (
+        <div className="mb-6">
+          <WalletSetupCard />
+        </div>
+      )}
+
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <p className="label-xs mb-2">Issuer Dashboard</p>
@@ -220,7 +248,8 @@ export default function IssuerPage() {
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                         ) : (
                           <>
-                            <Send className="w-3.5 h-3.5" /> Submit
+                            <Send className="w-3.5 h-3.5" />{" "}
+                            {a.status === "verified" ? "Activate" : "Submit"}
                           </>
                         )}
                       </button>

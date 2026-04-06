@@ -7,8 +7,9 @@ import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { FileDropInput } from "@/components/FileDropInput";
 import { StatusBadge } from "@/components/StatusBadge";
-import { assetsApi, issuerApi } from "@/lib/api";
+import { assetsApi, BASE, issuerApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { ensureWalletBound, sendIssuerTransaction } from "@/lib/solana";
 import { uploadAssetDocument } from "@/lib/uploads";
 import { ENERGY_META, formatNumber, formatUSDC } from "@/lib/utils";
 import type { IssuerAssetDetail, RevenueEpoch } from "@/types";
@@ -34,6 +35,7 @@ export default function ManageAssetPage() {
   const [reportFile, setReportFile] = useState<File | null>(null);
   const [savingEpoch, setSavingEpoch] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -64,6 +66,24 @@ export default function ManageAssetPage() {
     setMsg("");
 
     try {
+      if (asset.status === "verified") {
+        setMsg("Preparing on-chain transaction...");
+        await ensureWalletBound();
+
+        const payload = await issuerApi.prepareOnchainSetup(asset.id, {
+          // @ts-expect-error
+          metadata_uri: asset.assetMetadataUri || `${BASE}/api/v1/assets/${asset.id}/metadata`,
+        });
+
+        setMsg("Please sign the transaction in your wallet...");
+        const signature = await sendIssuerTransaction(payload);
+
+        setMsg("Confirming transaction on-chain...");
+        await issuerApi.confirmOnchainSetup(asset.id, signature);
+
+        setMsg("Asset initialized on-chain. Submitting for sale activation...");
+      }
+
       const res = await issuerApi.submit(asset.id);
       setMsg(`Asset submitted → ${res.next_status}`);
       const refreshed = await issuerApi.getAsset(asset.id);
@@ -72,6 +92,38 @@ export default function ManageAssetPage() {
       setMsg(err instanceof Error ? err.message : "Failed to submit asset.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleSyncWithChain() {
+    if (!asset) {
+      return;
+    }
+
+    setSyncing(true);
+    setMsg("");
+
+    try {
+      setMsg("Preparing on-chain sync...");
+      await ensureWalletBound();
+
+      const payload = await issuerApi.prepareOnchainSetup(asset.id, {
+        metadata_uri: `${BASE}/api/v1/assets/${asset.id}/metadata`,
+      });
+
+      setMsg("Please sign the sync transaction in your wallet...");
+      const signature = await sendIssuerTransaction(payload);
+
+      setMsg("Confirming sync transaction on-chain...");
+      await issuerApi.confirmOnchainSetup(asset.id, signature);
+
+      const refreshed = await issuerApi.getAsset(asset.id);
+      setAsset(refreshed);
+      setMsg(`Asset synced with chain: ${signature}`);
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Failed to sync asset with chain.");
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -164,6 +216,8 @@ export default function ManageAssetPage() {
 
   const energy = ENERGY_META[asset.energy_type];
   const canSubmit = asset.status === "draft" || asset.status === "verified";
+  const canSyncWithChain =
+    asset.status === "verified" || asset.status === "active_sale" || asset.status === "funded";
   const isSaleLive = asset.status === "active_sale" && asset.sale_terms?.sale_status === "live";
 
   return (
@@ -199,18 +253,35 @@ export default function ManageAssetPage() {
             <Link href={`/assets/${asset.id}`} className="btn-outline text-sm px-5">
               <ExternalLink className="w-4 h-4" /> Public Page
             </Link>
+            {canSyncWithChain && (
+              <button
+                type="button"
+                onClick={handleSyncWithChain}
+                disabled={syncing || submitting}
+                className="btn-outline text-sm px-5"
+              >
+                {syncing ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" /> Sync with chain
+                  </>
+                )}
+              </button>
+            )}
             {canSubmit && (
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || syncing}
                 className="btn-sol text-sm px-5"
               >
                 {submitting ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    <Send className="w-4 h-4" /> Submit
+                    <Send className="w-4 h-4" />{" "}
+                    {asset.status === "verified" ? "Activate On-Chain" : "Submit"}
                   </>
                 )}
               </button>

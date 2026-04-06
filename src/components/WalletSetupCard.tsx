@@ -1,9 +1,10 @@
 "use client";
 
+import { CheckCircle2, LogOut, Wallet } from "lucide-react";
 import { useState } from "react";
+import { authApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { connectWallet, ensureWalletBound } from "@/lib/solana";
-import { CheckCircle2, Wallet } from "lucide-react";
 
 export function WalletSetupCard() {
   const { user, refreshUser } = useAuth();
@@ -34,6 +35,22 @@ export function WalletSetupCard() {
     }
   }
 
+  async function handleWalletUnbind() {
+    setBindingWallet(true);
+    setError("");
+    setMessage("");
+
+    try {
+      await authApi.unlinkWallet();
+      await refreshUser();
+      setMessage("Wallet disconnected successfully.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to disconnect wallet.");
+    } finally {
+      setBindingWallet(false);
+    }
+  }
+
   return (
     <div className="card p-6 space-y-5">
       <div>
@@ -51,7 +68,9 @@ export function WalletSetupCard() {
               Status
             </span>
           </div>
-          <span className={`text-xs font-bold ${walletBound ? "text-[#14F195]" : "text-[#9945FF]"}`}>
+          <span
+            className={`text-xs font-bold ${walletBound ? "text-[#14F195]" : "text-[#9945FF]"}`}
+          >
             {walletBound ? "Connected" : "Not connected"}
           </span>
         </div>
@@ -63,28 +82,53 @@ export function WalletSetupCard() {
       </div>
 
       {!walletBound && (
-        <button type="button" onClick={handleWalletBind} disabled={bindingWallet} className="btn-dark w-full">
+        <button
+          type="button"
+          onClick={handleWalletBind}
+          disabled={bindingWallet}
+          className="btn-dark w-full"
+        >
           {bindingWallet ? "Connecting Wallet..." : "Connect Solana Wallet"}
         </button>
       )}
 
       {walletBound && (
-        <div className="rounded-2xl p-4 text-sm font-medium text-[#14F195]" style={{ background: "#14F19510" }}>
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
-            Wallet is ready for signing transactions.
+        <div className="flex flex-col gap-3">
+          <div
+            className="rounded-2xl p-4 text-sm font-medium text-[#14F195]"
+            style={{ background: "#14F19510" }}
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Wallet is ready for signing transactions.
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={handleWalletUnbind}
+            disabled={bindingWallet}
+            className="btn-outline w-full text-red-400 hover:text-red-300 border-red-400/20 hover:border-red-400/40 hover:bg-red-400/10"
+          >
+            <LogOut className="w-4 h-4" />{" "}
+            {bindingWallet ? "Disconnecting..." : "Disconnect Wallet"}
+          </button>
         </div>
       )}
 
       {message && (
-        <div className="rounded-2xl p-3 text-xs font-medium text-[#14F195]" style={{ background: "#14F19510" }}>
+        <div
+          className="rounded-2xl p-3 text-xs font-medium text-[#14F195]"
+          style={{ background: "#14F19510" }}
+        >
           {message}
         </div>
       )}
 
       {error && (
-        <div className="rounded-2xl p-3 text-xs font-medium text-red-400" style={{ background: "rgba(248,113,113,0.1)" }}>
+        <div
+          className="rounded-2xl p-3 text-xs font-medium text-red-400"
+          style={{ background: "rgba(248,113,113,0.1)" }}
+        >
           {error}
         </div>
       )}

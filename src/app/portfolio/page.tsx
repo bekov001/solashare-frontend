@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ArrowUpRight, Wallet } from "lucide-react";
 import Link from "next/link";
-import { investorApi } from "@/lib/api";
+import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { investorApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { formatUSDC, formatPercent, formatNumber } from "@/lib/utils";
+import { formatNumber, formatPercent, formatUSDC } from "@/lib/utils";
 import type { Portfolio } from "@/types";
-import { Wallet, ArrowUpRight } from "lucide-react";
 
 export default function PortfolioPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -31,9 +31,7 @@ export default function PortfolioPage() {
       })
       .catch((err) => {
         setPortfolio(null);
-        setError(
-          err instanceof Error ? err.message : "Failed to load portfolio.",
-        );
+        setError(err instanceof Error ? err.message : "Failed to load portfolio.");
       })
       .finally(() => setLoading(false));
   }, [user]);
@@ -44,10 +42,7 @@ export default function PortfolioPage() {
         <div className="w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-6 sol-gradient">
           <Wallet className="w-8 h-8 text-white" />
         </div>
-        <h1
-          className="text-3xl font-black mb-3"
-          style={{ color: "var(--text)" }}
-        >
+        <h1 className="text-3xl font-black mb-3" style={{ color: "var(--text)" }}>
           Connect to view your portfolio
         </h1>
         <p className="text-sm mb-8" style={{ color: "var(--text-muted)" }}>
@@ -86,10 +81,7 @@ export default function PortfolioPage() {
       </div>
 
       <div>
-        <h2
-          className="text-2xl font-black mb-4"
-          style={{ color: "var(--text)" }}
-        >
+        <h2 className="text-2xl font-black mb-4" style={{ color: "var(--text)" }}>
           Active Positions
         </h2>
         {portfolio.positions.length === 0 ? (
@@ -107,20 +99,12 @@ export default function PortfolioPage() {
               <div key={pos.asset_id} className="card p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h3
-                      className="font-black text-lg mb-1"
-                      style={{ color: "var(--text)" }}
-                    >
+                    <h3 className="font-black text-lg mb-1" style={{ color: "var(--text)" }}>
                       {pos.title}
                     </h3>
-                    <div
-                      className="flex gap-4 text-sm"
-                      style={{ color: "var(--text-muted)" }}
-                    >
+                    <div className="flex gap-4 text-sm" style={{ color: "var(--text-muted)" }}>
                       <span>{formatNumber(pos.shares_amount)} shares</span>
-                      <span>
-                        {formatPercent(pos.shares_percentage)} of total
-                      </span>
+                      <span>{formatPercent(pos.shares_percentage)} of total</span>
                     </div>
                   </div>
 
@@ -130,10 +114,7 @@ export default function PortfolioPage() {
                         <p className="text-[#9945FF] font-black text-lg">
                           {formatUSDC(pos.unclaimed_usdc)}
                         </p>
-                        <p
-                          className="text-xs"
-                          style={{ color: "var(--text-faint)" }}
-                        >
+                        <p className="text-xs" style={{ color: "var(--text-faint)" }}>
                           Unclaimed
                         </p>
                       </div>
@@ -173,10 +154,7 @@ export default function PortfolioPage() {
 function PortfolioSkeleton() {
   return (
     <div className="max-w-[1440px] mx-auto px-8 py-10 space-y-8 animate-pulse">
-      <div
-        className="h-10 rounded-2xl w-64"
-        style={{ background: "var(--surface-low)" }}
-      />
+      <div className="h-10 rounded-2xl w-64" style={{ background: "var(--surface-low)" }} />
       <div className="grid grid-cols-3 gap-5">
         {[0, 1, 2].map((i) => (
           <div key={i} className="card h-28" />

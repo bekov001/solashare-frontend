@@ -1,9 +1,9 @@
 "use client";
 
+import { ArrowUpRight, CheckCircle2, Shield, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import type { KycStatus } from "@/types";
-import { ArrowUpRight, CheckCircle2, Shield, Wallet } from "lucide-react";
 
 const KYC_STATUS_LABELS: Record<KycStatus, string> = {
   not_started: "Not started",
@@ -41,7 +41,9 @@ export function InvestorSetupCard() {
                 KYC verification
               </span>
             </div>
-            <span className={`text-xs font-bold ${kycApproved ? "text-[#14F195]" : "text-[#9945FF]"}`}>
+            <span
+              className={`text-xs font-bold ${kycApproved ? "text-[#14F195]" : "text-[#9945FF]"}`}
+            >
               {KYC_STATUS_LABELS[(user.kyc_status ?? "not_started") as KycStatus]}
             </span>
           </div>
@@ -58,7 +60,9 @@ export function InvestorSetupCard() {
                 Solana wallet
               </span>
             </div>
-            <span className={`text-xs font-bold ${walletBound ? "text-[#14F195]" : "text-[#9945FF]"}`}>
+            <span
+              className={`text-xs font-bold ${walletBound ? "text-[#14F195]" : "text-[#9945FF]"}`}
+            >
               {walletBound ? "Connected" : "Not connected"}
             </span>
           </div>
@@ -82,7 +86,10 @@ export function InvestorSetupCard() {
       </div>
 
       {kycApproved && walletBound && (
-        <div className="rounded-2xl p-4 text-sm font-medium text-[#14F195]" style={{ background: "#14F19510" }}>
+        <div
+          className="rounded-2xl p-4 text-sm font-medium text-[#14F195]"
+          style={{ background: "#14F19510" }}
+        >
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
             Ready for investment and claim flows.

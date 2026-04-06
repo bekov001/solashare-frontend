@@ -438,48 +438,46 @@ export default function ProfilePage() {
               </div>
             )}
 
+            <WalletSetupCard />
+
             {profile.role === "investor" ? (
-              <>
-                <div className="card p-6 space-y-5">
-                  <div>
-                    <p className="label-xs mb-2">KYC</p>
-                    <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
-                      Verification status
-                    </h2>
-                  </div>
-
-                  <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-bold" style={{ color: "var(--text)" }}>
-                        Current status
-                      </span>
-                      <span
-                        className={`text-xs font-bold ${
-                          profile.kyc_status === "approved"
-                            ? "text-[#14F195]"
-                            : profile.kyc_status === "rejected"
-                              ? "text-red-400"
-                              : profile.kyc_status === "needs_changes"
-                                ? "text-amber-400"
-                                : "text-[#9945FF]"
-                        }`}
-                      >
-                        {profile.kyc_status ?? "not_started"}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-                      Upload or review your identity document on the dedicated KYC page.
-                    </p>
-                  </div>
-
-                  <Link href="/kyc" className="btn-outline w-full justify-center">
-                    Open KYC page
-                    <ArrowUpRight className="w-4 h-4" />
-                  </Link>
+              <div className="card p-6 space-y-5">
+                <div>
+                  <p className="label-xs mb-2">KYC</p>
+                  <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
+                    Verification status
+                  </h2>
                 </div>
 
-                <WalletSetupCard />
-              </>
+                <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-bold" style={{ color: "var(--text)" }}>
+                      Current status
+                    </span>
+                    <span
+                      className={`text-xs font-bold ${
+                        profile.kyc_status === "approved"
+                          ? "text-[#14F195]"
+                          : profile.kyc_status === "rejected"
+                            ? "text-red-400"
+                            : profile.kyc_status === "needs_changes"
+                              ? "text-amber-400"
+                              : "text-[#9945FF]"
+                      }`}
+                    >
+                      {profile.kyc_status ?? "not_started"}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+                    Upload or review your identity document on the dedicated KYC page.
+                  </p>
+                </div>
+
+                <Link href="/kyc" className="btn-outline w-full justify-center">
+                  Open KYC page
+                  <ArrowUpRight className="w-4 h-4" />
+                </Link>
+              </div>
             ) : (
               <div className="card p-6">
                 <p className="label-xs mb-2">Investor Access</p>
@@ -487,7 +485,7 @@ export default function ProfilePage() {
                   No investor checks required
                 </h2>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  KYC and wallet binding are only needed for investor investment and claim flows.
+                  KYC is only needed for investor investment and claim flows.
                 </p>
               </div>
             )}

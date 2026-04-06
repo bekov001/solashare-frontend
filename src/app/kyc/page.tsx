@@ -1,32 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCircle2, ShieldCheck, X, XCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { FileDropInput } from "@/components/FileDropInput";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { FileDropInput } from "@/components/FileDropInput";
 import { investorApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { uploadKycDocument } from "@/lib/uploads";
 import { formatDate } from "@/lib/utils";
 import type { KycDocumentType, KycOverview } from "@/types";
-import { CheckCircle2, ShieldCheck, X, XCircle } from "lucide-react";
 
 const DOCUMENT_TYPE_LABELS: Record<KycDocumentType, string> = {
   passport: "Passport",
   national_id: "National ID",
 };
 
-const isImageMimeType = (mimeType?: string | null) =>
-  Boolean(mimeType?.startsWith("image/"));
+const isImageMimeType = (mimeType?: string | null) => Boolean(mimeType?.startsWith("image/"));
 
 const STATUS_META = {
   not_started: {
     label: "Not started",
     tone: "text-[#9945FF]",
     bg: "#9945FF10",
-    description:
-      "Upload a government-issued identity document to start review.",
+    description: "Upload a government-issued identity document to start review.",
   },
   pending: {
     label: "Pending review",
@@ -39,8 +37,7 @@ const STATUS_META = {
     label: "Approved",
     tone: "text-[#14F195]",
     bg: "#14F19510",
-    description:
-      "KYC is approved. You can continue with wallet setup and investment flows.",
+    description: "KYC is approved. You can continue with wallet setup and investment flows.",
   },
   rejected: {
     label: "Rejected",
@@ -53,8 +50,7 @@ const STATUS_META = {
     label: "Needs changes",
     tone: "text-amber-400",
     bg: "rgba(251,191,36,0.12)",
-    description:
-      "The review team requested a new or clearer document. Submit an updated file.",
+    description: "The review team requested a new or clearer document. Submit an updated file.",
   },
 } as const;
 
@@ -102,9 +98,7 @@ export default function KycPage() {
       }
     } catch (err) {
       setOverview(null);
-      setError(
-        err instanceof Error ? err.message : "Failed to load KYC status.",
-      );
+      setError(err instanceof Error ? err.message : "Failed to load KYC status.");
     } finally {
       setLoading(false);
     }
@@ -170,9 +164,7 @@ export default function KycPage() {
       handleCancelDraft();
       setMessage("KYC request cancelled.");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to cancel KYC request.",
-      );
+      setError(err instanceof Error ? err.message : "Failed to cancel KYC request.");
     } finally {
       setCancelling(false);
     }
@@ -184,10 +176,7 @@ export default function KycPage() {
         <div className="w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-6 sol-gradient">
           <ShieldCheck className="w-8 h-8 text-white" />
         </div>
-        <h1
-          className="text-3xl font-black mb-3"
-          style={{ color: "var(--text)" }}
-        >
+        <h1 className="text-3xl font-black mb-3" style={{ color: "var(--text)" }}>
           Sign in to start KYC
         </h1>
         <p className="text-sm mb-8" style={{ color: "var(--text-muted)" }}>
@@ -228,9 +217,7 @@ export default function KycPage() {
       <div className="max-w-4xl mx-auto px-6 py-20">
         <EmptyState
           title="KYC unavailable"
-          description={
-            error || "Unable to load the current KYC workflow state."
-          }
+          description={error || "Unable to load the current KYC workflow state."}
         />
       </div>
     );
@@ -244,18 +231,12 @@ export default function KycPage() {
       <div className="max-w-6xl mx-auto px-8 py-10 animate-fade-in space-y-8">
         <section className="card p-8">
           <p className="label-xs mb-2">Investor Verification</p>
-          <h1
-            className="text-3xl font-black mb-3"
-            style={{ color: "var(--text)" }}
-          >
+          <h1 className="text-3xl font-black mb-3" style={{ color: "var(--text)" }}>
             KYC review
           </h1>
-          <p
-            className="text-sm max-w-2xl"
-            style={{ color: "var(--text-muted)" }}
-          >
-            Upload one government-issued identity document. Use either a
-            passport or a national ID card.
+          <p className="text-sm max-w-2xl" style={{ color: "var(--text-muted)" }}>
+            Upload one government-issued identity document. Use either a passport or a national ID
+            card.
           </p>
         </section>
 
@@ -277,40 +258,25 @@ export default function KycPage() {
 
             <div className="space-y-3">
               {overview.submitted_at && (
-                <div
-                  className="rounded-2xl p-4"
-                  style={{ background: "var(--surface-low)" }}
-                >
+                <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
                   <p className="label-xs mb-1">Submitted</p>
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "var(--text)" }}
-                  >
+                  <p className="text-sm font-medium" style={{ color: "var(--text)" }}>
                     {formatDate(overview.submitted_at)}
                   </p>
                 </div>
               )}
 
               {overview.reviewed_at && (
-                <div
-                  className="rounded-2xl p-4"
-                  style={{ background: "var(--surface-low)" }}
-                >
+                <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
                   <p className="label-xs mb-1">Reviewed</p>
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "var(--text)" }}
-                  >
+                  <p className="text-sm font-medium" style={{ color: "var(--text)" }}>
                     {formatDate(overview.reviewed_at)}
                   </p>
                 </div>
               )}
 
               {overview.decision_notes && (
-                <div
-                  className="rounded-2xl p-4"
-                  style={{ background: "var(--surface-low)" }}
-                >
+                <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
                   <p className="label-xs mb-1">Review Notes</p>
                   <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                     {overview.decision_notes}
@@ -319,15 +285,9 @@ export default function KycPage() {
               )}
 
               {currentRequest && (
-                <div
-                  className="rounded-2xl p-4"
-                  style={{ background: "var(--surface-low)" }}
-                >
+                <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
                   <p className="label-xs mb-1">Latest Submission</p>
-                  <p
-                    className="text-sm font-bold"
-                    style={{ color: "var(--text)" }}
-                  >
+                  <p className="text-sm font-bold" style={{ color: "var(--text)" }}>
                     {DOCUMENT_TYPE_LABELS[currentRequest.document_type]}:{" "}
                     {currentRequest.document_name}
                   </p>
@@ -343,10 +303,7 @@ export default function KycPage() {
                       className="mt-3 block w-full overflow-hidden rounded-2xl border transition-transform hover:scale-[1.01]"
                       style={{ borderColor: "var(--border)" }}
                     >
-                      <div
-                        className="relative h-72 w-full"
-                        style={{ background: "var(--bg)" }}
-                      >
+                      <div className="relative h-72 w-full" style={{ background: "var(--bg)" }}>
                         <Image
                           src={currentRequest.document_uri}
                           alt={currentRequest.document_name}
@@ -373,10 +330,7 @@ export default function KycPage() {
               )}
             </div>
 
-            <div
-              className="rounded-2xl p-4"
-              style={{ background: "var(--surface-low)" }}
-            >
+            <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
               <p className="label-xs mb-1">Next Step</p>
               <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                 {overview.kyc_status === "approved"
@@ -389,13 +343,8 @@ export default function KycPage() {
           <section className="card p-6">
             <div className="mb-5">
               <p className="label-xs mb-2">Submission</p>
-              <h2
-                className="text-2xl font-black"
-                style={{ color: "var(--text)" }}
-              >
-                {overview.can_submit
-                  ? "Upload a document"
-                  : "Waiting for review"}
+              <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
+                {overview.can_submit ? "Upload a document" : "Waiting for review"}
               </h2>
             </div>
 
@@ -407,49 +356,38 @@ export default function KycPage() {
                   color: "var(--text-muted)",
                 }}
               >
-                Your current KYC status does not allow a new submission right
-                now.
+                Your current KYC status does not allow a new submission right now.
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="label-xs mb-2 block">Document type</label>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {(["passport", "national_id"] as KycDocumentType[]).map(
-                      (type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => setDocumentType(type)}
-                          className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
-                            documentType === type
-                              ? "border-[#9945FF] bg-[#9945FF]/5"
-                              : ""
-                          }`}
-                          style={
-                            documentType === type
-                              ? {}
-                              : {
-                                  borderColor: "var(--border)",
-                                  color: "var(--text-muted)",
-                                }
-                          }
-                        >
-                          <p
-                            className="text-sm font-bold"
-                            style={{ color: "var(--text)" }}
-                          >
-                            {DOCUMENT_TYPE_LABELS[type]}
-                          </p>
-                          <p
-                            className="mt-1 text-xs"
-                            style={{ color: "var(--text-faint)" }}
-                          >
-                            Upload a clear image or PDF.
-                          </p>
-                        </button>
-                      ),
-                    )}
+                    {(["passport", "national_id"] as KycDocumentType[]).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setDocumentType(type)}
+                        className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                          documentType === type ? "border-[#9945FF] bg-[#9945FF]/5" : ""
+                        }`}
+                        style={
+                          documentType === type
+                            ? {}
+                            : {
+                                borderColor: "var(--border)",
+                                color: "var(--text-muted)",
+                              }
+                        }
+                      >
+                        <p className="text-sm font-bold" style={{ color: "var(--text)" }}>
+                          {DOCUMENT_TYPE_LABELS[type]}
+                        </p>
+                        <p className="mt-1 text-xs" style={{ color: "var(--text-faint)" }}>
+                          Upload a clear image or PDF.
+                        </p>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -475,10 +413,7 @@ export default function KycPage() {
                       className="mt-4 block w-full overflow-hidden rounded-3xl border transition-transform hover:scale-[1.01]"
                       style={{ borderColor: "var(--border)" }}
                     >
-                      <div
-                        className="relative h-80 w-full"
-                        style={{ background: "var(--bg)" }}
-                      >
+                      <div className="relative h-80 w-full" style={{ background: "var(--bg)" }}>
                         <Image
                           src={localPreviewUrl}
                           alt={file?.name ?? "Selected KYC document"}
@@ -492,9 +427,7 @@ export default function KycPage() {
                 </div>
 
                 <div>
-                  <label className="label-xs mb-2 block">
-                    Notes for reviewer
-                  </label>
+                  <label className="label-xs mb-2 block">Notes for reviewer</label>
                   <textarea
                     rows={4}
                     className="input-new resize-none"
@@ -531,11 +464,7 @@ export default function KycPage() {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="btn-sol w-full"
-                  >
+                  <button type="submit" disabled={submitting} className="btn-sol w-full">
                     {submitting ? "Submitting KYC..." : "Submit for review"}
                   </button>
                 </div>
@@ -549,8 +478,7 @@ export default function KycPage() {
               >
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" />
-                  KYC is approved. Continue with wallet setup in your profile if
-                  needed.
+                  KYC is approved. Continue with wallet setup in your profile if needed.
                 </div>
               </div>
             )}
@@ -586,10 +514,7 @@ export default function KycPage() {
               <X className="w-4 h-4" />
             </button>
 
-            <div
-              className="relative aspect-[4/3] w-full"
-              style={{ background: "#050606" }}
-            >
+            <div className="relative aspect-[4/3] w-full" style={{ background: "#050606" }}>
               <Image
                 src={dialogImage.src}
                 alt={dialogImage.alt}

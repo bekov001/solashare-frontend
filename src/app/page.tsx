@@ -1,13 +1,13 @@
 "use client";
+import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { assetsApi } from "@/lib/api";
+import { useEffect, useState } from "react";
 import { AssetCard, AssetCardSkeleton } from "@/components/AssetCard";
 import { EmptyState } from "@/components/EmptyState";
+import { assetsApi } from "@/lib/api";
 import type { AssetListItem } from "@/types";
-import { ArrowRight } from "lucide-react";
 
 export default function HomePage() {
   const [assets, setAssets] = useState<AssetListItem[]>([]);
@@ -20,9 +20,7 @@ export default function HomePage() {
     assetsApi
       .list({ status: "active_sale", limit: 6, sort: "yield_desc" })
       .then((r) => setAssets(r.items))
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to load assets."),
-      )
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load assets."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -31,9 +29,7 @@ export default function HomePage() {
   }, []);
 
   const heroLogoSrc =
-    mounted && resolvedTheme === "light"
-      ? "/logo_grey_caption.svg"
-      : "/logo_white_caption.svg";
+    mounted && resolvedTheme === "light" ? "/logo_grey_caption.svg" : "/logo_white_caption.svg";
 
   return (
     <div className="max-w-[1440px] mx-auto px-8 animate-fade-in">
@@ -65,8 +61,8 @@ export default function HomePage() {
               className="text-lg max-w-xl leading-relaxed mb-10"
               style={{ color: "var(--text-muted)" }}
             >
-              SolaShare tokenizes revenue rights of real solar installations.
-              Buy fractional shares, claim yield on-chain — gasless.
+              SolaShare tokenizes revenue rights of real solar installations. Buy fractional shares,
+              claim yield on-chain — gasless.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link href="/assets" className="btn-sol text-base px-8 py-4">
@@ -148,10 +144,7 @@ export default function HomePage() {
         <div className="flex items-end justify-between mb-8">
           <div>
             <p className="label-xs mb-2">Active Offerings</p>
-            <h2
-              className="text-3xl font-black"
-              style={{ color: "var(--text)" }}
-            >
+            <h2 className="text-3xl font-black" style={{ color: "var(--text)" }}>
               Featured Assets
             </h2>
           </div>
@@ -226,16 +219,10 @@ export default function HomePage() {
               >
                 {s.icon}
               </span>
-              <h3
-                className="font-black text-base mb-2"
-                style={{ color: "var(--text)" }}
-              >
+              <h3 className="font-black text-base mb-2" style={{ color: "var(--text)" }}>
                 {s.title}
               </h3>
-              <p
-                className="text-sm leading-relaxed"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <p className="text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
                 {s.desc}
               </p>
             </div>
@@ -246,9 +233,7 @@ export default function HomePage() {
       {/* CTA */}
       <section className="mb-16">
         <div className="rounded-[40px] overflow-hidden relative p-12 text-center sol-gradient">
-          <h2 className="text-4xl font-black text-white mb-4">
-            Ready to earn green yield?
-          </h2>
+          <h2 className="text-4xl font-black text-white mb-4">Ready to earn green yield?</h2>
           <p className="text-white/80 mb-8 max-w-md mx-auto">
             Connect your Telegram account and start investing in clean energy.
           </p>

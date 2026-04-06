@@ -1,23 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import { StatusBadge } from "./StatusBadge";
-import {
-  ENERGY_META,
-  formatUSDC,
-  formatPercent,
-  formatNumber,
-} from "@/lib/utils";
+import { ENERGY_META, formatNumber, formatPercent, formatUSDC } from "@/lib/utils";
 import type { AssetListItem } from "@/types";
+import { StatusBadge } from "./StatusBadge";
 
 const ASSET_IMAGES: Record<string, string> = {
-  solar:
-    "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=600&q=80",
+  solar: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=600&q=80",
   wind: "https://images.unsplash.com/photo-1466611653911-95081537e5b7?w=600&q=80",
   hydro: "https://images.unsplash.com/photo-1548075791-7c7e6b5c0f44?w=600&q=80",
-  ev_charging:
-    "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=600&q=80",
-  other:
-    "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=600&q=80",
+  ev_charging: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=600&q=80",
+  other: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=600&q=80",
 };
 
 export function AssetCard({ asset }: { asset: AssetListItem }) {
@@ -59,38 +51,26 @@ export function AssetCard({ asset }: { asset: AssetListItem }) {
             <h3 className="text-lg font-black" style={{ color: "var(--text)" }}>
               {asset.title}
             </h3>
-            <p
-              className="text-xs font-bold"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <p className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>
               {energy.emoji} {energy.label}
             </p>
           </div>
           <span className="font-black text-[#00693e] dark:text-[#14F195]">
             {formatUSDC(asset.price_per_share_usdc)}
-            <span
-              className="text-[10px] font-bold ml-1"
-              style={{ color: "var(--text-faint)" }}
-            >
+            <span className="text-[10px] font-bold ml-1" style={{ color: "var(--text-faint)" }}>
               / share
             </span>
           </span>
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div
-            className="rounded-2xl p-3"
-            style={{ background: "var(--surface-low)" }}
-          >
+          <div className="rounded-2xl p-3" style={{ background: "var(--surface-low)" }}>
             <p className="label-xs mb-1">Capacity</p>
             <p className="text-sm font-bold" style={{ color: "var(--text)" }}>
               {formatNumber(asset.capacity_kw)} kW
             </p>
           </div>
-          <div
-            className="rounded-2xl p-3"
-            style={{ background: "var(--surface-low)" }}
-          >
+          <div className="rounded-2xl p-3" style={{ background: "var(--surface-low)" }}>
             <p className="label-xs mb-1">Min. buy</p>
             <p className="text-sm font-bold" style={{ color: "var(--text)" }}>
               {formatUSDC(asset.price_per_share_usdc * 5)}
@@ -112,24 +92,12 @@ export function AssetCardSkeleton() {
     >
       <div className="h-56" style={{ background: "var(--surface-low)" }} />
       <div className="p-7 space-y-4">
-        <div
-          className="h-5 rounded-xl w-3/4"
-          style={{ background: "var(--surface-low)" }}
-        />
+        <div className="h-5 rounded-xl w-3/4" style={{ background: "var(--surface-low)" }} />
         <div className="grid grid-cols-2 gap-3">
-          <div
-            className="h-14 rounded-2xl"
-            style={{ background: "var(--surface-low)" }}
-          />
-          <div
-            className="h-14 rounded-2xl"
-            style={{ background: "var(--surface-low)" }}
-          />
+          <div className="h-14 rounded-2xl" style={{ background: "var(--surface-low)" }} />
+          <div className="h-14 rounded-2xl" style={{ background: "var(--surface-low)" }} />
         </div>
-        <div
-          className="h-11 rounded-full"
-          style={{ background: "var(--surface-low)" }}
-        />
+        <div className="h-11 rounded-full" style={{ background: "var(--surface-low)" }} />
       </div>
     </div>
   );

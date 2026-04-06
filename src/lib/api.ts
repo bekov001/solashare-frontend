@@ -29,7 +29,7 @@ import type {
   WalletVerifyResponse,
 } from "@/types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+export const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 const V1 = `${BASE}/api/v1`;
 
 function getToken(): string | null {
@@ -203,6 +203,15 @@ export const authApi = {
       },
       true,
     ),
+
+  unlinkWallet: (): Promise<{ success: boolean; message: string }> =>
+    request(
+      "/auth/wallet/unlink",
+      {
+        method: "POST",
+      },
+      true,
+    ),
 };
 
 // ─── Assets ───────────────────────────────────────────────────────────────────
@@ -305,6 +314,20 @@ export const issuerApi = {
     request<{ success: boolean; message: string; next_status: string }>(
       `/issuer/assets/${id}/submit`,
       { method: "POST" },
+      true,
+    ),
+
+  prepareOnchainSetup: (id: string, data: { metadata_uri?: string }) =>
+    request<PreparedTransactionResponse>(
+      `/issuer/assets/${id}/onchain/setup`,
+      { method: "POST", body: JSON.stringify(data) },
+      true,
+    ),
+
+  confirmOnchainSetup: (id: string, signature: string) =>
+    request<{ success: boolean; asset_id: string }>(
+      `/issuer/assets/${id}/onchain/confirm`,
+      { method: "POST", body: JSON.stringify({ transaction_signature: signature }) },
       true,
     ),
 

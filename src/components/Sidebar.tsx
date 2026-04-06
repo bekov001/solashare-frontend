@@ -1,9 +1,9 @@
 "use client";
+import type { LucideIcon } from "lucide-react";
+import { Bolt, Home, Shield, Store, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import type { LucideIcon } from "lucide-react";
-import { Bolt, Home, Shield, Store, Wallet } from "lucide-react";
 
 const LINKS = [
   { href: "/", icon: Home, label: "Home" },
@@ -43,8 +43,7 @@ export function Sidebar() {
     >
       <nav className="flex-1 px-4 pt-2 space-y-1">
         {links.map((l) => {
-          const active =
-            l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
+          const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
           const Icon = l.icon;
           return (
             <Link
@@ -64,17 +63,11 @@ export function Sidebar() {
         })}
       </nav>
       <div className="p-4 pb-6">
-        <div
-          className="rounded-2xl p-4"
-          style={{ background: "var(--surface-low)" }}
-        >
+        <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
           <p className="label-xs mb-2">Network</p>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-[#14F195] rounded-full" />
-            <span
-              className="text-xs font-bold"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>
               Solana Devnet
             </span>
           </div>

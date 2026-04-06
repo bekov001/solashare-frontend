@@ -1,11 +1,11 @@
 "use client";
 
+import { LogIn, LogOut, UserCircle2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogIn, LogOut, UserCircle2 } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "@/lib/auth";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function TopControls() {
   const pathname = usePathname();
