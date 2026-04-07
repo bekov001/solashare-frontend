@@ -35,8 +35,8 @@ const STATUS_META = {
   },
   approved: {
     label: "Approved",
-    tone: "text-[#14F195]",
-    bg: "#14F19510",
+    tone: "text-[var(--accent-green-ui)]",
+    bg: "rgb(var(--accent-green-ui-rgb) / 0.1)",
     description: "KYC is approved. You can continue with wallet setup and investment flows.",
   },
   rejected: {
@@ -439,8 +439,8 @@ export default function KycPage() {
 
                 {message && (
                   <div
-                    className="rounded-2xl p-3 text-xs font-medium text-[#14F195]"
-                    style={{ background: "#14F19510" }}
+                    className="rounded-2xl p-3 text-xs font-medium text-[var(--accent-green-ui)]"
+                    style={{ background: "rgb(var(--accent-green-ui-rgb) / 0.1)" }}
                   >
                     {message}
                   </div>
@@ -473,8 +473,8 @@ export default function KycPage() {
 
             {overview.kyc_status === "approved" && (
               <div
-                className="mt-5 rounded-2xl p-4 text-sm font-medium text-[#14F195]"
-                style={{ background: "#14F19510" }}
+                className="mt-5 rounded-2xl p-4 text-sm font-medium text-[var(--accent-green-ui)]"
+                style={{ background: "rgb(var(--accent-green-ui-rgb) / 0.1)" }}
               >
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" />

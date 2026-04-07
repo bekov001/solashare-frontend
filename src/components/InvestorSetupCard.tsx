@@ -35,14 +35,15 @@ export function InvestorSetupCard() {
       <div className="grid gap-3">
         <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-[#9945FF]" />
-              <span className="text-sm font-bold" style={{ color: "var(--text)" }}>
+            <div className="flex min-w-0 items-center gap-2">
+              <Shield className="h-4 w-4 shrink-0 text-[#9945FF]" />
+              <span className="min-w-0 text-sm font-bold" style={{ color: "var(--text)" }}>
                 KYC verification
               </span>
             </div>
             <span
-              className={`text-xs font-bold ${kycApproved ? "text-[#14F195]" : "text-[#9945FF]"}`}
+              className="shrink-0 text-right text-xs font-bold"
+              style={{ color: kycApproved ? "var(--accent-green-ui)" : "#9945FF" }}
             >
               {KYC_STATUS_LABELS[(user.kyc_status ?? "not_started") as KycStatus]}
             </span>
@@ -54,20 +55,21 @@ export function InvestorSetupCard() {
 
         <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-[#14F195]" />
-              <span className="text-sm font-bold" style={{ color: "var(--text)" }}>
+            <div className="flex min-w-0 items-center gap-2">
+              <Wallet className="h-4 w-4 shrink-0" style={{ color: "var(--wallet-accent)" }} />
+              <span className="min-w-0 text-sm font-bold" style={{ color: "var(--text)" }}>
                 Solana wallet
               </span>
             </div>
             <span
-              className={`text-xs font-bold ${walletBound ? "text-[#14F195]" : "text-[#9945FF]"}`}
+              className="shrink-0 text-right text-xs font-bold"
+              style={{ color: walletBound ? "var(--accent-green-ui)" : "#9945FF" }}
             >
               {walletBound ? "Connected" : "Not connected"}
             </span>
           </div>
           {user.wallet_address && (
-            <p className="mt-2 text-xs font-mono" style={{ color: "var(--text-faint)" }}>
+            <p className="mt-2 break-all text-xs font-mono" style={{ color: "var(--text-faint)" }}>
               {user.wallet_address}
             </p>
           )}
@@ -87,8 +89,11 @@ export function InvestorSetupCard() {
 
       {kycApproved && walletBound && (
         <div
-          className="rounded-2xl p-4 text-sm font-medium text-[#14F195]"
-          style={{ background: "#14F19510" }}
+          className="rounded-2xl p-4 text-sm font-medium"
+          style={{
+            color: "var(--accent-green-ui)",
+            background: "rgb(var(--accent-green-ui-rgb) / 0.1)",
+          }}
         >
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />

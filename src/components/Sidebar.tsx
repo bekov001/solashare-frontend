@@ -1,40 +1,13 @@
 "use client";
-import type { LucideIcon } from "lucide-react";
-import { Bolt, Home, Shield, Store, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getVisibleAppNav } from "@/components/app-nav";
 import { useAuth } from "@/lib/auth";
-
-const LINKS = [
-  { href: "/", icon: Home, label: "Home" },
-  { href: "/assets", icon: Store, label: "Marketplace" },
-  {
-    href: "/portfolio",
-    icon: Wallet,
-    label: "My Assets",
-    auth: true,
-    role: "investor",
-  },
-  { href: "/issuer", icon: Bolt, label: "Issuer", auth: true, role: "issuer" },
-  { href: "/admin", icon: Shield, label: "Admin", auth: true, role: "admin" },
-] satisfies Array<{
-  href: string;
-  icon: LucideIcon;
-  label: string;
-  auth?: boolean;
-  role?: string;
-}>;
 
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
-
-  const links = LINKS.filter((l) => {
-    if (!l.auth) return true;
-    if (!user) return false;
-    if (l.role && user.role !== l.role) return false;
-    return true;
-  });
+  const links = getVisibleAppNav(user);
 
   return (
     <aside
@@ -42,13 +15,13 @@ export function Sidebar() {
       style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
       <nav className="flex-1 px-4 pt-2 space-y-1">
-        {links.map((l) => {
-          const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
-          const Icon = l.icon;
+        {links.map((item) => {
+          const active = pathname.startsWith(item.href);
+          const Icon = item.icon;
           return (
             <Link
-              key={l.href}
-              href={l.href}
+              key={item.href}
+              href={item.href}
               className={
                 active
                   ? "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold bg-[#9945FF]/5 text-[#9945FF] transition-all"
@@ -57,7 +30,7 @@ export function Sidebar() {
               style={active ? {} : { color: "var(--text-muted)" }}
             >
               <Icon className="w-5 h-5" />
-              {l.label}
+              {item.label}
             </Link>
           );
         })}
@@ -66,7 +39,10 @@ export function Sidebar() {
         <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
           <p className="label-xs mb-2">Network</p>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-[#14F195] rounded-full" />
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{ background: "var(--accent-green-ui)" }}
+            />
             <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>
               Solana Devnet
             </span>

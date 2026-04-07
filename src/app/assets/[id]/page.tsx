@@ -205,7 +205,7 @@ export default function AssetDetailPage() {
                 {asset.location.city ?? "Unknown city"}, {asset.location.country}
               </span>
               <span className="flex items-center gap-1.5">
-                <Zap className="w-3.5 h-3.5 text-[#14F195]" />
+                <Zap className="w-3.5 h-3.5" style={{ color: "var(--accent-green-ui)" }} />
                 {formatNumber(asset.capacity_kw)} kW capacity
               </span>
               <span className="flex items-center gap-1.5">
@@ -355,7 +355,7 @@ export default function AssetDetailPage() {
                           <span
                             className={`text-xs px-3 py-1 rounded-full font-bold ${
                               epoch.posting_status === "posted"
-                                ? "text-[#14F195] bg-[#14F195]/10"
+                                ? "text-[var(--accent-green-ui)] bg-[rgb(var(--accent-green-ui-rgb)/0.10)]"
                                 : epoch.posting_status === "settled"
                                   ? "text-[#9945FF] bg-[#9945FF]/10"
                                   : "bg-[var(--surface-low)]"
@@ -417,7 +417,7 @@ export default function AssetDetailPage() {
                     {
                       label: "Total Investors",
                       val: formatNumber(holders.total_investors),
-                      color: "text-[#14F195]",
+                      color: "text-[var(--accent-green-ui)]",
                     },
                     {
                       label: "Funded",
@@ -462,7 +462,9 @@ export default function AssetDetailPage() {
                 style={{ color: "var(--text-muted)" }}
               >
                 <span>Funded</span>
-                <span className="font-bold text-[#14F195]">{formatPercent(fundedPct)}</span>
+                <span className="font-bold text-[var(--accent-green-ui)]">
+                  {formatPercent(fundedPct)}
+                </span>
               </div>
               <div
                 className="h-2 rounded-full overflow-hidden"
@@ -602,7 +604,7 @@ export default function AssetDetailPage() {
                   >
                     <div className="flex justify-between">
                       <span style={{ color: "var(--text-muted)" }}>Shares to receive</span>
-                      <span className="font-black text-[#14F195]">
+                      <span className="font-black text-[var(--accent-green-ui)]">
                         {formatNumber(quote.shares_to_receive)}
                       </span>
                     </div>
@@ -646,7 +648,9 @@ export default function AssetDetailPage() {
                 className="text-center p-3 rounded-2xl"
                 style={{ background: "var(--surface-low)" }}
               >
-                <p className="text-2xl font-black text-[#14F195]">{revenueSummary.total_epochs}</p>
+                <p className="text-2xl font-black text-[var(--accent-green-ui)]">
+                  {revenueSummary.total_epochs}
+                </p>
                 <p className="text-xs mt-0.5" style={{ color: "var(--text-faint)" }}>
                   Total Epochs
                 </p>

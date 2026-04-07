@@ -60,10 +60,6 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
-function normalizeSignature(result: SignAndSendResult): string {
-  return typeof result === "string" ? result : result.signature;
-}
-
 function normalizeSignedMessage(result: SignMessageResult): Uint8Array {
   return result instanceof Uint8Array ? result : result.signature;
 }

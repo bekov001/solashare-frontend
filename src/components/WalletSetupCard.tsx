@@ -62,14 +62,15 @@ export function WalletSetupCard() {
 
       <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-[#14F195]" />
-            <span className="text-sm font-bold" style={{ color: "var(--text)" }}>
+          <div className="flex min-w-0 items-center gap-2">
+            <Wallet className="h-4 w-4 shrink-0" style={{ color: "var(--wallet-accent)" }} />
+            <span className="min-w-0 text-sm font-bold" style={{ color: "var(--text)" }}>
               Status
             </span>
           </div>
           <span
-            className={`text-xs font-bold ${walletBound ? "text-[#14F195]" : "text-[#9945FF]"}`}
+            className="shrink-0 text-right text-xs font-bold"
+            style={{ color: walletBound ? "var(--accent-green-ui)" : "#9945FF" }}
           >
             {walletBound ? "Connected" : "Not connected"}
           </span>
@@ -95,8 +96,11 @@ export function WalletSetupCard() {
       {walletBound && (
         <div className="flex flex-col gap-3">
           <div
-            className="rounded-2xl p-4 text-sm font-medium text-[#14F195]"
-            style={{ background: "#14F19510" }}
+            className="rounded-2xl p-4 text-sm font-medium"
+            style={{
+              color: "var(--accent-green-ui)",
+              background: "rgb(var(--accent-green-ui-rgb) / 0.1)",
+            }}
           >
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4" />
@@ -117,8 +121,11 @@ export function WalletSetupCard() {
 
       {message && (
         <div
-          className="rounded-2xl p-3 text-xs font-medium text-[#14F195]"
-          style={{ background: "#14F19510" }}
+          className="rounded-2xl p-3 text-xs font-medium"
+          style={{
+            color: "var(--accent-green-ui)",
+            background: "rgb(var(--accent-green-ui-rgb) / 0.1)",
+          }}
         >
           {message}
         </div>

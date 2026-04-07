@@ -41,7 +41,7 @@ export function Header() {
                 href={l.href}
                 className={`pb-0.5 transition-colors ${
                   active
-                    ? "text-[#2d2f2f] dark:text-white border-b-2 border-[#14F195]"
+                    ? "text-[#2d2f2f] dark:text-white border-b-2 border-[var(--accent-green-ui)]"
                     : "text-gray-400 hover:text-[#2d2f2f] dark:hover:text-white"
                 }`}
               >

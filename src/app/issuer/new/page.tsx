@@ -122,7 +122,10 @@ export default function NewAssetPage() {
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 rounded-full border-2 border-[#14F195] border-t-transparent animate-spin" />
+        <div
+          className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+          style={{ borderColor: "var(--accent-green-ui)", borderTopColor: "transparent" }}
+        />
       </div>
     );
   }
@@ -281,19 +284,31 @@ export default function NewAssetPage() {
                         done
                           ? "sol-gradient text-white"
                           : active
-                            ? "bg-[#14F195]/10 text-[#14F195] border-2 border-[#14F195]"
+                            ? "border-2"
                             : "border-2 text-[var(--text-faint)]"
                       }`}
-                      style={!done && !active ? { borderColor: "var(--border)" } : {}}
+                      style={
+                        active
+                          ? {
+                              color: "var(--accent-green-ui)",
+                              borderColor: "var(--accent-green-ui)",
+                              background: "rgb(var(--accent-green-ui-rgb) / 0.1)",
+                            }
+                          : !done
+                            ? { borderColor: "var(--border)" }
+                            : {}
+                      }
                     >
                       {done ? "✓" : s.n}
                     </div>
                     <span
-                      className={`text-sm font-bold transition-colors ${
-                        active ? "text-[#14F195]" : done ? "" : ""
-                      }`}
+                      className="text-sm font-bold transition-colors"
                       style={{
-                        color: active ? "#14F195" : done ? "var(--text)" : "var(--text-faint)",
+                        color: active
+                          ? "var(--accent-green-ui)"
+                          : done
+                            ? "var(--text)"
+                            : "var(--text-faint)",
                       }}
                     >
                       {s.label}
@@ -306,9 +321,14 @@ export default function NewAssetPage() {
 
           {/* Pro tip */}
           <div className="card p-4 flex gap-3">
-            <Lightbulb className="w-4 h-4 text-[#14F195] shrink-0 mt-0.5" />
+            <Lightbulb
+              className="w-4 h-4 shrink-0 mt-0.5"
+              style={{ color: "var(--accent-green-ui)" }}
+            />
             <div>
-              <p className="text-xs font-black text-[#14F195] mb-1">Pro Tip</p>
+              <p className="mb-1 text-xs font-black" style={{ color: "var(--accent-green-ui)" }}>
+                Pro Tip
+              </p>
               <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
                 High-quality Arweave documentation increases investor trust by up to 40%.
               </p>
@@ -541,7 +561,7 @@ export default function NewAssetPage() {
             {step === 3 && (
               <>
                 <div
-                  className="rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer hover:border-[#14F195]/50 transition-colors"
+                  className="rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-colors hover:border-[rgb(var(--accent-green-ui-rgb)/0.50)]"
                   style={{ borderColor: "var(--border)" }}
                   onClick={() => docsInputRef.current?.click()}
                 >
@@ -741,7 +761,8 @@ export default function NewAssetPage() {
               <button
                 type="button"
                 onClick={fillTestData}
-                className="flex items-center gap-2 text-sm font-bold text-[#14F195] hover:opacity-80 transition-opacity"
+                className="flex items-center gap-2 text-sm font-bold transition-opacity hover:opacity-80"
+                style={{ color: "var(--accent-green-ui)" }}
               >
                 <Sparkles className="w-4 h-4" />
                 Fill Test Data

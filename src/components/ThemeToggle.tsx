@@ -21,7 +21,7 @@ export function ThemeToggle() {
       className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 border"
       style={{
         background: isDark ? "rgba(34,197,94,0.08)" : "rgba(34,197,94,0.10)",
-        borderColor: "var(--border-hover)",
+        borderColor: "var(--border)",
         color: isDark ? "#4ade80" : "#15803d",
       }}
     >

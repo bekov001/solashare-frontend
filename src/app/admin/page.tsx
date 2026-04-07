@@ -370,7 +370,7 @@ export default function AdminPage() {
             {
               label: "KYC Queue",
               val: kycRequests.length,
-              color: "text-[#14F195]",
+              color: "text-[var(--accent-green-ui)]",
             },
           ].map((s) => (
             <div key={s.label} className="card p-5 text-center">
@@ -485,8 +485,8 @@ export default function AdminPage() {
                                 type="button"
                                 onClick={() => doAssetAction(a.id, "verify", "Approve")}
                                 disabled={action === `verify-${a.id}`}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 text-[#14F195] hover:bg-[#14F195]/10"
-                                style={{ background: "#14F19510" }}
+                                className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-[var(--accent-green-ui)] transition-all hover:bg-[rgb(var(--accent-green-ui-rgb)/0.10)] disabled:opacity-50"
+                                style={{ background: "rgb(var(--accent-green-ui-rgb) / 0.1)" }}
                               >
                                 {action === `verify-${a.id}` ? (
                                   <RefreshCw className="w-3 h-3 animate-spin" />
@@ -903,8 +903,8 @@ export default function AdminPage() {
                             type="button"
                             onClick={() => approveKyc(request)}
                             disabled={action === `kyc-${request.verification_request_id}-approved`}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#14F195]"
-                            style={{ background: "#14F19510" }}
+                            className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-[var(--accent-green-ui)]"
+                            style={{ background: "rgb(var(--accent-green-ui-rgb) / 0.1)" }}
                           >
                             {action === `kyc-${request.verification_request_id}-approved` ? (
                               <RefreshCw className="w-3 h-3 animate-spin" />

@@ -28,6 +28,7 @@ if (apiUrl) {
 const nextConfig = {
   images: {
     remotePatterns,
+    dangerouslyAllowLocalIP: true,
   },
   turbopack: {
     root: rootDir,

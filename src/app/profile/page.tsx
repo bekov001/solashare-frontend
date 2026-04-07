@@ -332,8 +332,8 @@ export default function ProfilePage() {
 
               {message && (
                 <div
-                  className="rounded-2xl p-3 text-xs font-medium text-[#14F195]"
-                  style={{ background: "#14F19510" }}
+                  className="rounded-2xl p-3 text-xs font-medium text-[var(--accent-green-ui)]"
+                  style={{ background: "rgb(var(--accent-green-ui-rgb) / 0.1)" }}
                 >
                   {message}
                 </div>
@@ -411,8 +411,8 @@ export default function ProfilePage() {
 
                   {passwordLinkMessage && (
                     <div
-                      className="rounded-2xl p-3 text-xs font-medium text-[#14F195]"
-                      style={{ background: "#14F19510" }}
+                      className="rounded-2xl p-3 text-xs font-medium text-[var(--accent-green-ui)]"
+                      style={{ background: "rgb(var(--accent-green-ui-rgb) / 0.1)" }}
                     >
                       {passwordLinkMessage}
                     </div>
@@ -457,7 +457,7 @@ export default function ProfilePage() {
                     <span
                       className={`text-xs font-bold ${
                         profile.kyc_status === "approved"
-                          ? "text-[#14F195]"
+                          ? "text-[var(--accent-green-ui)]"
                           : profile.kyc_status === "rejected"
                             ? "text-red-400"
                             : profile.kyc_status === "needs_changes"

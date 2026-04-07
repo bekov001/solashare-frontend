@@ -150,7 +150,7 @@ export default function IssuerPage() {
           {
             label: "Active Sale",
             count: assets.filter((a) => a.status === "active_sale").length,
-            color: "text-[#14F195]",
+            color: "text-[var(--accent-green-ui)]",
           },
           {
             label: "Funded",

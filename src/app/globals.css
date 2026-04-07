@@ -12,6 +12,9 @@
   --text: #2d2f2f;
   --text-muted: #5a5c5c;
   --text-faint: #9a9c9c;
+  --accent-green-ui: #0f9f6e;
+  --accent-green-ui-rgb: 15 159 110;
+  --wallet-accent: var(--accent-green-ui);
 }
 
 .dark {
@@ -22,6 +25,9 @@
   --text: #f0f2f0;
   --text-muted: #9c9d9d;
   --text-faint: #5a5c5c;
+  --accent-green-ui: #14f195;
+  --accent-green-ui-rgb: 20 241 149;
+  --wallet-accent: var(--accent-green-ui);
 }
 
 @layer base {

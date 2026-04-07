@@ -150,7 +150,7 @@ export default function LoginPage() {
         <div className="card p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-[#14F195]" />
+              <Mail className="w-4 h-4" style={{ color: "var(--accent-green-ui)" }} />
               <h2 className="font-bold text-sm" style={{ color: "var(--text)" }}>
                 Email Auth
               </h2>
