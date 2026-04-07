@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { WalletSetupCard } from "@/components/WalletSetupCard";
+import { WalletBindButton } from "@/components/wallet/WalletBindButton";
 import { BASE, issuerApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ensureWalletBound, sendIssuerTransaction } from "@/lib/solana";
@@ -130,9 +131,20 @@ export default function IssuerPage() {
             My Assets
           </h1>
         </div>
-        <Link href="/issuer/new" className="btn-sol">
-          <Plus className="w-4 h-4" /> New Asset
-        </Link>
+        <div className="flex items-center gap-3">
+          <div className="hidden lg:block">
+            <WalletBindButton />
+          </div>
+          <Link href="/issuer/new" className="btn-sol">
+            <Plus className="w-4 h-4" /> New Asset
+          </Link>
+        </div>
+      </div>
+
+      <div className="lg:hidden">
+        <div className="card p-4">
+          <WalletBindButton />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

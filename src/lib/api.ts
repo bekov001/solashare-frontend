@@ -398,6 +398,46 @@ export const issuerApi = {
       transaction_payload: unknown;
       message: string;
     }>(`/issuer/assets/${assetId}/revenue-epochs/${epochId}/post`, { method: "POST" }, true),
+
+  onchainSetup: (assetId: string, metadata_uri?: string) =>
+    request<{
+      success: boolean;
+      operation_id: string;
+      serialized_tx: string;
+      metadata: {
+        kind: "onchain_setup";
+        asset_id: string;
+        title: string;
+      };
+      expires_at: number;
+    }>(
+      `/issuer/assets/${assetId}/onchain/setup`,
+      {
+        method: "POST",
+        body: JSON.stringify(metadata_uri ? { metadata_uri } : {}),
+      },
+      true,
+    ),
+
+  onchainConfirm: (assetId: string, transaction_signature: string) =>
+    request<{
+      success: boolean;
+      asset_id: string;
+      resulting_status: string;
+      sale_status: string;
+      onchain_refs: {
+        onchain_asset_pubkey: string;
+        share_mint_pubkey: string;
+        vault_pubkey: string;
+      };
+    }>(
+      `/issuer/assets/${assetId}/onchain/confirm`,
+      {
+        method: "POST",
+        body: JSON.stringify({ transaction_signature }),
+      },
+      true,
+    ),
 };
 
 // ─── Investor ─────────────────────────────────────────────────────────────────

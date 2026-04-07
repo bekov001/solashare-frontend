@@ -1,5 +1,5 @@
 "use client";
-import { LogOut, Menu, X } from "lucide-react";
+import { CheckCircle2, LogOut, Menu, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -54,6 +54,18 @@ export function Header() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
 
+          {user?.wallet_address && (
+            <Link
+              href="/profile"
+              className="hidden lg:inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors hover:border-[#14F195]/40"
+              style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+              title={user.wallet_address}
+            >
+              <Wallet className="w-3.5 h-3.5 text-[#14F195]" />
+              <CheckCircle2 className="w-3 h-3 text-[#14F195]" />
+            </Link>
+          )}
+
           {user ? (
             <button
               type="button"
@@ -71,6 +83,7 @@ export function Header() {
           )}
 
           <button
+            type="button"
             className="md:hidden p-1.5 rounded-lg"
             style={{ color: "var(--text-muted)" }}
             onClick={() => setMobileOpen(!mobileOpen)}

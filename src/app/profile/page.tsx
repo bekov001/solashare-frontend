@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { FileDropInput } from "@/components/FileDropInput";
 import { WalletSetupCard } from "@/components/WalletSetupCard";
+import { WalletBindButton } from "@/components/wallet/WalletBindButton";
 import { authApi, investorApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { uploadAvatarImage } from "@/lib/uploads";
@@ -441,52 +442,67 @@ export default function ProfilePage() {
             <WalletSetupCard />
 
             {profile.role === "investor" ? (
+              <>
+                <div className="card p-6 space-y-5">
+                  <div>
+                    <p className="label-xs mb-2">KYC</p>
+                    <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
+                      Verification status
+                    </h2>
+                  </div>
+
+                  <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-bold" style={{ color: "var(--text)" }}>
+                        Current status
+                      </span>
+                      <span
+                        className={`text-xs font-bold ${
+                          profile.kyc_status === "approved"
+                            ? "text-[var(--accent-green-ui)]"
+                            : profile.kyc_status === "rejected"
+                              ? "text-red-400"
+                              : profile.kyc_status === "needs_changes"
+                                ? "text-amber-400"
+                                : "text-[#9945FF]"
+                        }`}
+                      >
+                        {profile.kyc_status ?? "not_started"}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+                      Upload or review your identity document on the dedicated KYC page.
+                    </p>
+                  </div>
+
+                  <Link href="/kyc" className="btn-outline w-full justify-center">
+                    Open KYC page
+                    <ArrowUpRight className="w-4 h-4" />
+                  </Link>
+                </div>
+
+                <div className="card p-6 space-y-5">
+                  <div>
+                    <p className="label-xs mb-2">Wallet</p>
+                    <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
+                      Solana Wallet
+                    </h2>
+                  </div>
+                  <WalletBindButton />
+                </div>
+              </>
+            ) : (
               <div className="card p-6 space-y-5">
                 <div>
-                  <p className="label-xs mb-2">KYC</p>
+                  <p className="label-xs mb-2">Wallet</p>
                   <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
-                    Verification status
+                    Solana Wallet
                   </h2>
                 </div>
-
-                <div className="rounded-2xl p-4" style={{ background: "var(--surface-low)" }}>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-bold" style={{ color: "var(--text)" }}>
-                      Current status
-                    </span>
-                    <span
-                      className={`text-xs font-bold ${
-                        profile.kyc_status === "approved"
-                          ? "text-[var(--accent-green-ui)]"
-                          : profile.kyc_status === "rejected"
-                            ? "text-red-400"
-                            : profile.kyc_status === "needs_changes"
-                              ? "text-amber-400"
-                              : "text-[#9945FF]"
-                      }`}
-                    >
-                      {profile.kyc_status ?? "not_started"}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-                    Upload or review your identity document on the dedicated KYC page.
-                  </p>
-                </div>
-
-                <Link href="/kyc" className="btn-outline w-full justify-center">
-                  Open KYC page
-                  <ArrowUpRight className="w-4 h-4" />
-                </Link>
-              </div>
-            ) : (
-              <div className="card p-6">
-                <p className="label-xs mb-2">Investor Access</p>
-                <h2 className="text-2xl font-black mb-3" style={{ color: "var(--text)" }}>
-                  No investor checks required
-                </h2>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                   KYC is only needed for investor investment and claim flows.
                 </p>
+                <WalletBindButton />
               </div>
             )}
           </section>

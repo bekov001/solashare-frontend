@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
+import { WalletBindButton } from "@/components/wallet/WalletBindButton";
 import { adminApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ENERGY_META, formatDate } from "@/lib/utils";
@@ -335,18 +336,29 @@ export default function AdminPage() {
   return (
     <>
       <div className="max-w-[1440px] mx-auto px-8 py-10 animate-fade-in space-y-8">
-        <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-2xl flex items-center justify-center"
-            style={{ background: "#9945FF15" }}
-          >
-            <ShieldCheck className="w-5 h-5 text-[#9945FF]" />
+        <div className="flex items-start justify-between gap-6 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-2xl flex items-center justify-center"
+              style={{ background: "#9945FF15" }}
+            >
+              <ShieldCheck className="w-5 h-5 text-[#9945FF]" />
+            </div>
+            <div>
+              <p className="label-xs">Platform Management</p>
+              <h1 className="text-3xl font-black" style={{ color: "var(--text)" }}>
+                Admin Panel
+              </h1>
+            </div>
           </div>
-          <div>
-            <p className="label-xs">Platform Management</p>
-            <h1 className="text-3xl font-black" style={{ color: "var(--text)" }}>
-              Admin Panel
-            </h1>
+          <div className="hidden lg:block">
+            <WalletBindButton />
+          </div>
+        </div>
+
+        <div className="lg:hidden">
+          <div className="card p-4">
+            <WalletBindButton />
           </div>
         </div>
 

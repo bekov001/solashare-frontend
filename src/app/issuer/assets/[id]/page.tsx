@@ -19,6 +19,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { FileDropInput } from "@/components/FileDropInput";
+import { InitializeOnChainButton } from "@/components/issuer/InitializeOnChainButton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { assetsApi, BASE, issuerApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -555,6 +556,8 @@ export default function ManageAssetPage() {
     asset.cover_image_url ??
     ASSET_COVER_FALLBACK[asset.energy_type] ??
     ASSET_COVER_FALLBACK.other;
+  const canInitializeOnChain =
+    asset.status === "verified" && asset.sale_terms?.sale_status === "draft";
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 animate-fade-in space-y-7">
@@ -685,6 +688,17 @@ export default function ManageAssetPage() {
             </div>
           )}
         </div>
+      )}
+
+      {canInitializeOnChain && (
+        <InitializeOnChainButton
+          assetId={asset.id}
+          assetTitle={asset.title}
+          onSuccess={() => {
+            setMsg("Asset successfully initialized on Solana!");
+            void loadPage(asset.id);
+          }}
+        />
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">

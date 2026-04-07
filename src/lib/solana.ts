@@ -18,27 +18,22 @@ export interface BrowserWalletProvider {
   ) => Promise<SignAndSendResult>;
 }
 
-declare global {
-  interface Window {
-    solana?: BrowserWalletProvider;
-    phantom?: {
-      solana?: BrowserWalletProvider;
-    };
-  }
-}
+// Remove global Window type declaration since wallet-adapter handles this
+// The wallet adapter types will manage the window.solana interface
 
 function getProvider(): BrowserWalletProvider {
   if (typeof window === "undefined") {
     throw new Error("Wallet is only available in the browser.");
   }
 
-  const provider = window.phantom?.solana ?? window.solana;
+  // Use type assertion to handle wallet adapter types
+  const provider = (window as any).phantom?.solana ?? (window as any).solana;
 
   if (!provider) {
     throw new Error("No Solana wallet provider found. Install Phantom or a compatible wallet.");
   }
 
-  return provider;
+  return provider as BrowserWalletProvider;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
