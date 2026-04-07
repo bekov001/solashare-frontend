@@ -214,6 +214,7 @@ export interface IssuerAssetListItem {
   price_per_share_usdc: number | null;
   valuation_usdc: number | null;
   total_shares: number | null;
+  is_publicly_visible: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -230,6 +231,7 @@ export interface IssuerAssetDetail {
   capacity_kw: number;
   currency: string;
   expected_annual_yield_percent: number | null;
+  is_publicly_visible: boolean;
   cover_image_url: string | null;
   issuer: AssetIssuer;
   revenue_summary: RevenueSummary;

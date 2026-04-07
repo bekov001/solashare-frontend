@@ -276,6 +276,20 @@ export const issuerApi = {
       true,
     ),
 
+  updateVisibility: (id: string, is_publicly_visible: boolean) =>
+    request<{ success: boolean; asset_id: string; is_publicly_visible: boolean }>(
+      `/issuer/assets/${id}/visibility`,
+      { method: "POST", body: JSON.stringify({ is_publicly_visible }) },
+      true,
+    ),
+
+  deleteAsset: (id: string) =>
+    request<{ success: boolean; asset_id: string }>(
+      `/issuer/assets/${id}`,
+      { method: "DELETE" },
+      true,
+    ),
+
   uploadDocument: (
     id: string,
     data: {
@@ -291,6 +305,32 @@ export const issuerApi = {
     request<{ document_id: string; success: boolean }>(
       `/issuer/assets/${id}/documents`,
       { method: "POST", body: JSON.stringify(data) },
+      true,
+    ),
+
+  updateDocument: (
+    id: string,
+    documentId: string,
+    data: {
+      type?: string;
+      title?: string;
+      storage_provider?: string;
+      storage_uri?: string;
+      content_hash?: string;
+      mime_type?: string | null;
+      is_public?: boolean;
+    },
+  ) =>
+    request<{ document_id: string; success: boolean }>(
+      `/issuer/assets/${id}/documents/${documentId}`,
+      { method: "PATCH", body: JSON.stringify(data) },
+      true,
+    ),
+
+  deleteDocument: (id: string, documentId: string) =>
+    request<{ document_id: string; success: boolean }>(
+      `/issuer/assets/${id}/documents/${documentId}`,
+      { method: "DELETE" },
       true,
     ),
 

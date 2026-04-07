@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ExternalLink, FileText, MapPin, Shield, TrendingUp, Zap } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -27,6 +28,14 @@ import type {
 } from "@/types";
 
 type Tab = "overview" | "documents" | "revenue" | "holders";
+
+const ASSET_COVER_FALLBACK: Record<string, string> = {
+  solar: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=1200&q=80",
+  wind: "https://images.unsplash.com/photo-1466611653911-95081537e5b7?w=1200&q=80",
+  hydro: "https://images.unsplash.com/photo-1548075791-7c7e6b5c0f44?w=1200&q=80",
+  ev_charging: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=1200&q=80",
+  other: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=1200&q=80",
+};
 
 export default function AssetDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -144,6 +153,8 @@ export default function AssetDetailPage() {
   const visibleDocuments = "public_documents" in asset ? documents : asset.documents;
   const saleTerms = asset.sale_terms;
   const isSaleLive = asset.status === "active_sale" && saleTerms?.sale_status === "live";
+  const coverImage =
+    asset.cover_image_url ?? ASSET_COVER_FALLBACK[asset.energy_type] ?? ASSET_COVER_FALLBACK.other;
   const revenueSummary =
     "revenue_summary" in asset
       ? asset.revenue_summary
@@ -169,6 +180,20 @@ export default function AssetDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <div className="card p-7">
+            <div className="relative mb-6 h-72 overflow-hidden rounded-[2rem]">
+              <Image
+                src={coverImage}
+                alt={asset.title}
+                fill
+                sizes="(max-width: 1024px) 100vw, 66vw"
+                className="object-cover"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+              <div className="absolute left-6 top-6">
+                <StatusBadge status={asset.status} />
+              </div>
+            </div>
             {isPrivatePreview && (
               <div
                 className="mb-4 rounded-2xl px-4 py-3 text-sm font-medium text-amber-300"
@@ -192,7 +217,6 @@ export default function AssetDetailPage() {
                   </h1>
                 </div>
               </div>
-              <StatusBadge status={asset.status} />
             </div>
 
             <p className="text-sm leading-relaxed mb-5" style={{ color: "var(--text-muted)" }}>

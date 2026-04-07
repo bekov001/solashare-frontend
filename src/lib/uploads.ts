@@ -42,3 +42,7 @@ export function uploadAvatarImage(file: File) {
 export function uploadAssetDocument(file: File) {
   return uploadPrivateFile("asset_document", file);
 }
+
+export function uploadAssetCover(file: File) {
+  return uploadPrivateFile("asset_document", file);
+}

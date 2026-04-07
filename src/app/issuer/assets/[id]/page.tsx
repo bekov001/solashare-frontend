@@ -1,21 +1,92 @@
 "use client";
 
-import { ArrowLeft, ExternalLink, FileText, Plus, RefreshCw, Send } from "lucide-react";
+import {
+  ArrowLeft,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  FileText,
+  Plus,
+  RefreshCw,
+  Save,
+  Send,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { FileDropInput } from "@/components/FileDropInput";
 import { StatusBadge } from "@/components/StatusBadge";
 import { assetsApi, BASE, issuerApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ensureWalletBound, sendIssuerTransaction } from "@/lib/solana";
-import { uploadAssetDocument } from "@/lib/uploads";
+import { uploadAssetCover, uploadAssetDocument } from "@/lib/uploads";
 import { ENERGY_META, formatNumber, formatUSDC } from "@/lib/utils";
-import type { IssuerAssetDetail, RevenueEpoch } from "@/types";
+import type { AssetDocument, IssuerAssetDetail, RevenueEpoch } from "@/types";
+
+const DOCUMENT_TYPE_OPTIONS = [
+  "ownership_doc",
+  "right_to_income_doc",
+  "technical_passport",
+  "photo",
+  "meter_info",
+  "financial_model",
+  "revenue_report",
+  "other",
+] as const;
+
+const ASSET_COVER_FALLBACK: Record<string, string> = {
+  solar: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=1200&q=80",
+  wind: "https://images.unsplash.com/photo-1466611653911-95081537e5b7?w=1200&q=80",
+  hydro: "https://images.unsplash.com/photo-1548075791-7c7e6b5c0f44?w=1200&q=80",
+  ev_charging: "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=1200&q=80",
+  other: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=1200&q=80",
+};
+
+type AssetFormState = {
+  title: string;
+  short_description: string;
+  full_description: string;
+  location_country: string;
+  location_region: string;
+  location_city: string;
+};
+
+type DocumentFormState = {
+  title: string;
+  type: AssetDocument["type"];
+  is_public: boolean;
+  replacementFile: File | null;
+};
+
+const createAssetFormState = (asset: IssuerAssetDetail): AssetFormState => ({
+  title: asset.title,
+  short_description: asset.short_description,
+  full_description: asset.full_description,
+  location_country: asset.location.country,
+  location_region: asset.location.region ?? "",
+  location_city: asset.location.city ?? "",
+});
+
+const createDocumentDrafts = (documents: AssetDocument[]): Record<string, DocumentFormState> =>
+  Object.fromEntries(
+    documents.map((document) => [
+      document.id,
+      {
+        title: document.title,
+        type: document.type,
+        is_public: document.is_public,
+        replacementFile: null,
+      },
+    ]),
+  );
 
 export default function ManageAssetPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const [asset, setAsset] = useState<IssuerAssetDetail | null>(null);
   const [revenue, setRevenue] = useState<RevenueEpoch[]>([]);
@@ -33,29 +104,75 @@ export default function ManageAssetPage() {
     source_type: "operator_statement",
   });
   const [reportFile, setReportFile] = useState<File | null>(null);
+  const [assetForm, setAssetForm] = useState<AssetFormState>({
+    title: "",
+    short_description: "",
+    full_description: "",
+    location_country: "",
+    location_region: "",
+    location_city: "",
+  });
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [documentDrafts, setDocumentDrafts] = useState<Record<string, DocumentFormState>>({});
+  const [newDocument, setNewDocument] = useState({
+    title: "",
+    type: "other" as AssetDocument["type"],
+    is_public: false,
+  });
+  const [newDocumentFile, setNewDocumentFile] = useState<File | null>(null);
+  const [savingAsset, setSavingAsset] = useState(false);
   const [savingEpoch, setSavingEpoch] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [savingDocumentId, setSavingDocumentId] = useState<string | null>(null);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
+  const [deletingAsset, setDeletingAsset] = useState(false);
+  const localCoverPreview = useMemo(() => {
+    if (!coverFile) {
+      return null;
+    }
+
+    return URL.createObjectURL(coverFile);
+  }, [coverFile]);
+
+  useEffect(() => {
+    return () => {
+      if (localCoverPreview) {
+        URL.revokeObjectURL(localCoverPreview);
+      }
+    };
+  }, [localCoverPreview]);
+
+  const loadPage = useCallback(async (assetId: string) => {
+    setError("");
+    setLoading(true);
+
+    try {
+      const [assetRes, revenueRes] = await Promise.all([
+        issuerApi.getAsset(assetId),
+        assetsApi.revenue(assetId).catch(() => ({ items: [] })),
+      ]);
+
+      setAsset(assetRes);
+      setAssetForm(createAssetFormState(assetRes));
+      setDocumentDrafts(createDocumentDrafts(assetRes.documents));
+      setRevenue(revenueRes.items);
+    } catch (err) {
+      setAsset(null);
+      setError(err instanceof Error ? err.message : "Failed to load asset.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!id) {
       return;
     }
 
-    setError("");
-    setLoading(true);
-
-    Promise.all([issuerApi.getAsset(id), assetsApi.revenue(id).catch(() => ({ items: [] }))])
-      .then(([assetRes, revenueRes]) => {
-        setAsset(assetRes);
-        setRevenue(revenueRes.items);
-      })
-      .catch((err) => {
-        setAsset(null);
-        setError(err instanceof Error ? err.message : "Failed to load asset.");
-      })
-      .finally(() => setLoading(false));
-  }, [id]);
+    void loadPage(id);
+  }, [id, loadPage]);
 
   async function handleSubmit() {
     if (!asset) {
@@ -71,7 +188,7 @@ export default function ManageAssetPage() {
         await ensureWalletBound();
 
         const payload = await issuerApi.prepareOnchainSetup(asset.id, {
-          // @ts-expect-error
+          // @ts-expect-error existing response model omits this field from the frontend type
           metadata_uri: asset.assetMetadataUri || `${BASE}/api/v1/assets/${asset.id}/metadata`,
         });
 
@@ -85,9 +202,8 @@ export default function ManageAssetPage() {
       }
 
       const res = await issuerApi.submit(asset.id);
-      setMsg(`Asset submitted → ${res.next_status}`);
-      const refreshed = await issuerApi.getAsset(asset.id);
-      setAsset(refreshed);
+      setMsg(`Asset submitted -> ${res.next_status}`);
+      await loadPage(asset.id);
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Failed to submit asset.");
     } finally {
@@ -117,13 +233,99 @@ export default function ManageAssetPage() {
       setMsg("Confirming sync transaction on-chain...");
       await issuerApi.confirmOnchainSetup(asset.id, signature);
 
-      const refreshed = await issuerApi.getAsset(asset.id);
-      setAsset(refreshed);
+      await loadPage(asset.id);
       setMsg(`Asset synced with chain: ${signature}`);
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Failed to sync asset with chain.");
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function handleSaveAsset(event: React.FormEvent) {
+    event.preventDefault();
+
+    if (!asset) {
+      return;
+    }
+
+    setSavingAsset(true);
+    setMsg("");
+
+    try {
+      let coverImageUrl = asset.cover_image_url;
+
+      if (coverFile) {
+        const uploadedCover = await uploadAssetCover(coverFile);
+        coverImageUrl = uploadedCover.file_url;
+      }
+
+      await issuerApi.updateAsset(asset.id, {
+        title: assetForm.title.trim(),
+        short_description: assetForm.short_description.trim(),
+        full_description: assetForm.full_description.trim(),
+        location_country: assetForm.location_country.trim(),
+        location_region: assetForm.location_region.trim() || undefined,
+        location_city: assetForm.location_city.trim() || undefined,
+        cover_image_url: coverImageUrl,
+      });
+
+      setCoverFile(null);
+      await loadPage(asset.id);
+      setMsg("Asset details updated.");
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Failed to update asset.");
+    } finally {
+      setSavingAsset(false);
+    }
+  }
+
+  async function handleToggleVisibility(nextVisibility: boolean) {
+    if (!asset) {
+      return;
+    }
+
+    setTogglingVisibility(true);
+    setMsg("");
+
+    try {
+      await issuerApi.updateVisibility(asset.id, nextVisibility);
+      await loadPage(asset.id);
+      setMsg(
+        nextVisibility
+          ? "Asset is visible in the marketplace."
+          : "Asset is hidden from the marketplace.",
+      );
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Failed to update asset visibility.");
+    } finally {
+      setTogglingVisibility(false);
+    }
+  }
+
+  async function handleDeleteAsset() {
+    if (!asset) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete this asset? This only works when the asset has no investments, revenue, claims, transfers, or on-chain state.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingAsset(true);
+    setMsg("");
+
+    try {
+      await issuerApi.deleteAsset(asset.id);
+      router.push("/issuer");
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Failed to delete asset.");
+    } finally {
+      setDeletingAsset(false);
     }
   }
 
@@ -166,12 +368,138 @@ export default function ManageAssetPage() {
         distributable_revenue_usdc: "",
         source_type: "operator_statement",
       });
+
       const revenueRes = await assetsApi.revenue(asset.id).catch(() => ({ items: [] }));
       setRevenue(revenueRes.items);
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Failed to create revenue epoch.");
     } finally {
       setSavingEpoch(false);
+    }
+  }
+
+  function updateDocumentDraft(documentId: string, patch: Partial<DocumentFormState>) {
+    setDocumentDrafts((current) => ({
+      ...current,
+      [documentId]: {
+        ...current[documentId],
+        ...patch,
+      },
+    }));
+  }
+
+  async function handleSaveDocument(documentId: string) {
+    if (!asset) {
+      return;
+    }
+
+    const draft = documentDrafts[documentId];
+
+    if (!draft) {
+      return;
+    }
+
+    setSavingDocumentId(documentId);
+    setMsg("");
+
+    try {
+      const payload: {
+        title?: string;
+        type?: AssetDocument["type"];
+        is_public?: boolean;
+        storage_provider?: AssetDocument["storage_provider"];
+        storage_uri?: string;
+        content_hash?: string;
+        mime_type?: string | null;
+      } = {
+        title: draft.title.trim(),
+        type: draft.type,
+        is_public: draft.is_public,
+      };
+
+      if (draft.replacementFile) {
+        const uploadedDocument = await uploadAssetDocument(draft.replacementFile);
+        payload.storage_provider = "s3";
+        payload.storage_uri = uploadedDocument.file_url;
+        payload.content_hash = uploadedDocument.content_hash;
+        payload.mime_type = draft.replacementFile.type || "application/octet-stream";
+      }
+
+      await issuerApi.updateDocument(asset.id, documentId, payload);
+      await loadPage(asset.id);
+      setMsg("Document updated.");
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Failed to update document.");
+    } finally {
+      setSavingDocumentId(null);
+    }
+  }
+
+  async function handleDeleteDocument(documentId: string) {
+    if (!asset) {
+      return;
+    }
+
+    const confirmed = window.confirm("Delete this document from the asset?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    setSavingDocumentId(documentId);
+    setMsg("");
+
+    try {
+      await issuerApi.deleteDocument(asset.id, documentId);
+      await loadPage(asset.id);
+      setMsg("Document deleted.");
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Failed to delete document.");
+    } finally {
+      setSavingDocumentId(null);
+    }
+  }
+
+  async function handleUploadNewDocument(event: React.FormEvent) {
+    event.preventDefault();
+
+    if (!asset) {
+      return;
+    }
+
+    if (!newDocumentFile) {
+      setMsg("Choose a document file first.");
+      return;
+    }
+
+    setUploadingDocument(true);
+    setMsg("");
+
+    try {
+      const uploadedDocument = await uploadAssetDocument(newDocumentFile);
+
+      await issuerApi.uploadDocument(asset.id, {
+        title: newDocument.title.trim(),
+        type: newDocument.type,
+        storage_provider: "s3",
+        storage_uri: uploadedDocument.file_url,
+        content_hash: uploadedDocument.content_hash,
+        mime_type: newDocumentFile.type || "application/octet-stream",
+        is_public: newDocument.is_public,
+      });
+
+      setNewDocument({
+        title: "",
+        type: "other",
+        is_public: false,
+      });
+      setNewDocumentFile(null);
+      await loadPage(asset.id);
+      setMsg("Document uploaded.");
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Failed to upload document.");
+    } finally {
+      setUploadingDocument(false);
     }
   }
 
@@ -199,9 +527,12 @@ export default function ManageAssetPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-10 space-y-5 animate-pulse">
-        <div className="card h-32" />
+      <div className="max-w-6xl mx-auto px-6 py-10 space-y-5 animate-pulse">
         <div className="card h-48" />
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="card h-96" />
+          <div className="card h-96" />
+        </div>
       </div>
     );
   }
@@ -219,9 +550,14 @@ export default function ManageAssetPage() {
   const canSyncWithChain =
     asset.status === "verified" || asset.status === "active_sale" || asset.status === "funded";
   const isSaleLive = asset.status === "active_sale" && asset.sale_terms?.sale_status === "live";
+  const coverPreview =
+    localCoverPreview ??
+    asset.cover_image_url ??
+    ASSET_COVER_FALLBACK[asset.energy_type] ??
+    ASSET_COVER_FALLBACK.other;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 animate-fade-in space-y-7">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 animate-fade-in space-y-7">
       <Link
         href="/issuer"
         className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-emerald-400 transition-colors"
@@ -229,66 +565,78 @@ export default function ManageAssetPage() {
         <ArrowLeft className="w-4 h-4" /> Back to dashboard
       </Link>
 
-      <div className="card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
-              style={{ background: "var(--surface-low)" }}
-            >
-              {energy.emoji}
-            </div>
-            <div>
-              <h1 className="text-xl font-black" style={{ color: "var(--text)" }}>
-                {asset.title}
-              </h1>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                {asset.location.city ?? "Location pending"}, {asset.location.country}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
+      <section className="card overflow-hidden p-0">
+        <div className="relative h-72">
+          <Image
+            src={coverPreview}
+            alt={asset.title}
+            fill
+            sizes="100vw"
+            className="object-cover"
+            unoptimized={Boolean(coverFile)}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+          <div className="absolute left-6 top-6 flex flex-wrap items-center gap-3">
             <StatusBadge status={asset.status} />
-            <Link href={`/assets/${asset.id}`} className="btn-outline text-sm px-5">
-              <ExternalLink className="w-4 h-4" /> Public Page
-            </Link>
-            {canSyncWithChain && (
-              <button
-                type="button"
-                onClick={handleSyncWithChain}
-                disabled={syncing || submitting}
-                className="btn-outline text-sm px-5"
-              >
-                {syncing ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4" /> Sync with chain
-                  </>
-                )}
-              </button>
-            )}
-            {canSubmit && (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={submitting || syncing}
-                className="btn-sol text-sm px-5"
-              >
-                {submitting ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />{" "}
-                    {asset.status === "verified" ? "Activate On-Chain" : "Submit"}
-                  </>
-                )}
-              </button>
-            )}
+            <span
+              className="rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.18em]"
+              style={{
+                background: asset.is_publicly_visible
+                  ? "rgba(34, 197, 94, 0.14)"
+                  : "rgba(148, 163, 184, 0.16)",
+                color: asset.is_publicly_visible ? "rgb(74 222 128)" : "rgb(203 213 225)",
+              }}
+            >
+              {asset.is_publicly_visible ? "Visible" : "Hidden"}
+            </span>
+          </div>
+          <div className="absolute bottom-6 left-6 right-6 flex flex-wrap items-end justify-between gap-4">
+            <div className="max-w-3xl">
+              <p className="label-xs text-white/70 mb-2">{energy.label}</p>
+              <h1 className="text-3xl font-black text-white">{asset.title}</h1>
+              <p className="mt-3 max-w-2xl text-sm text-white/80">{asset.short_description}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href={`/assets/${asset.id}`} className="btn-outline text-sm px-5">
+                <ExternalLink className="w-4 h-4" /> Public page
+              </Link>
+              {canSyncWithChain && (
+                <button
+                  type="button"
+                  onClick={handleSyncWithChain}
+                  disabled={syncing || submitting}
+                  className="btn-outline text-sm px-5"
+                >
+                  {syncing ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" /> Sync with chain
+                    </>
+                  )}
+                </button>
+              )}
+              {canSubmit && (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting || syncing}
+                  className="btn-sol text-sm px-5"
+                >
+                  {submitting ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />{" "}
+                      {asset.status === "verified" ? "Activate On-Chain" : "Submit"}
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {msg && (
         <div
@@ -332,18 +680,228 @@ export default function ManageAssetPage() {
                 >
                   <p className="text-sm font-bold text-amber-300">{issue.label ?? issue.field}</p>
                   <p className="mt-2 text-sm leading-6 text-slate-300">{issue.note}</p>
-                  {(issue.actual_value || issue.expected_value) && (
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2 text-xs text-slate-400">
-                      <div>Submitted: {issue.actual_value ?? "n/a"}</div>
-                      <div>Expected: {issue.expected_value ?? "n/a"}</div>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
       )}
+
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <form onSubmit={handleSaveAsset} className="card p-6 space-y-5">
+          <div>
+            <p className="label-xs mb-2">Metadata</p>
+            <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
+              Edit asset details
+            </h2>
+          </div>
+
+          <div>
+            <label htmlFor="asset-title" className="label-xs block mb-2">
+              Title
+            </label>
+            <input
+              id="asset-title"
+              value={assetForm.title}
+              onChange={(event) =>
+                setAssetForm((current) => ({ ...current, title: event.target.value }))
+              }
+              className="input-new text-sm py-3"
+              minLength={3}
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="asset-short-description" className="label-xs block mb-2">
+              Short description
+            </label>
+            <textarea
+              id="asset-short-description"
+              value={assetForm.short_description}
+              onChange={(event) =>
+                setAssetForm((current) => ({ ...current, short_description: event.target.value }))
+              }
+              className="input-new min-h-[110px] text-sm py-3"
+              minLength={10}
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="asset-full-description" className="label-xs block mb-2">
+              Full description
+            </label>
+            <textarea
+              id="asset-full-description"
+              value={assetForm.full_description}
+              onChange={(event) =>
+                setAssetForm((current) => ({ ...current, full_description: event.target.value }))
+              }
+              className="input-new min-h-[220px] text-sm py-3"
+              minLength={20}
+              required
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label htmlFor="asset-country" className="label-xs block mb-2">
+                Country
+              </label>
+              <input
+                id="asset-country"
+                value={assetForm.location_country}
+                onChange={(event) =>
+                  setAssetForm((current) => ({ ...current, location_country: event.target.value }))
+                }
+                className="input-new text-sm py-3"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="asset-region" className="label-xs block mb-2">
+                Region
+              </label>
+              <input
+                id="asset-region"
+                value={assetForm.location_region}
+                onChange={(event) =>
+                  setAssetForm((current) => ({ ...current, location_region: event.target.value }))
+                }
+                className="input-new text-sm py-3"
+              />
+            </div>
+            <div>
+              <label htmlFor="asset-city" className="label-xs block mb-2">
+                City
+              </label>
+              <input
+                id="asset-city"
+                value={assetForm.location_city}
+                onChange={(event) =>
+                  setAssetForm((current) => ({ ...current, location_city: event.target.value }))
+                }
+                className="input-new text-sm py-3"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="label-xs block mb-2">Cover image</label>
+            <FileDropInput
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              buttonLabel="Upload cover"
+              title="Drop a cover image here"
+              selectedLabel={coverFile?.name ?? asset.cover_image_url ?? null}
+              description="JPEG, PNG, or WEBP. This image is used on the public asset page and issuer dashboard."
+              onFilesSelected={(files) => setCoverFile(files[0] ?? null)}
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <button type="submit" disabled={savingAsset} className="btn-sol text-sm px-5">
+              {savingAsset ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              Save details
+            </button>
+          </div>
+        </form>
+
+        <div className="space-y-6">
+          <div className="card p-6">
+            <p className="label-xs mb-2">Publication</p>
+            <h2 className="text-2xl font-black mb-3" style={{ color: "var(--text)" }}>
+              Marketplace visibility
+            </h2>
+            <p className="text-sm leading-6 mb-5" style={{ color: "var(--text-muted)" }}>
+              Hide the asset from the public marketplace without deleting internal data or changing
+              the on-chain flow.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => handleToggleVisibility(!asset.is_publicly_visible)}
+                disabled={togglingVisibility}
+                className="btn-outline text-sm"
+              >
+                {togglingVisibility ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : asset.is_publicly_visible ? (
+                  <>
+                    <EyeOff className="w-4 h-4" /> Hide asset
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4" /> Show asset
+                  </>
+                )}
+              </button>
+              <Link href={`/assets/${asset.id}`} className="btn-outline text-sm">
+                <ExternalLink className="w-4 h-4" /> Open public page
+              </Link>
+            </div>
+          </div>
+
+          <div className="card p-6">
+            <p className="label-xs mb-2">Quick facts</p>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: "Energy Type", value: energy.label },
+                { label: "Capacity", value: `${formatNumber(asset.capacity_kw)} kW` },
+                {
+                  label: "Expected APY",
+                  value:
+                    asset.expected_annual_yield_percent === null
+                      ? "TBD"
+                      : `${asset.expected_annual_yield_percent}%`,
+                },
+                { label: "Revenue Epochs", value: String(revenue.length) },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl p-4"
+                  style={{ background: "var(--surface-low)" }}
+                >
+                  <p className="text-lg font-black" style={{ color: "var(--text)" }}>
+                    {item.value}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                    {item.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card p-6">
+            <p className="label-xs mb-2">Danger Zone</p>
+            <h2 className="text-2xl font-black mb-3" style={{ color: "var(--text)" }}>
+              Delete asset
+            </h2>
+            <p className="text-sm leading-6 mb-5" style={{ color: "var(--text-muted)" }}>
+              Deletion is blocked once the asset has investments, revenue, claims, transfer history,
+              or on-chain state.
+            </p>
+            <button
+              type="button"
+              onClick={handleDeleteAsset}
+              disabled={deletingAsset}
+              className="btn-outline text-sm border-red-500/30 text-red-400 hover:bg-red-500/10"
+            >
+              {deletingAsset ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              Delete asset
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="card p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -358,40 +916,12 @@ export default function ManageAssetPage() {
               and sale status is
               <span className="font-semibold text-[var(--text)]"> live</span>.
             </p>
-            <p className="text-xs" style={{ color: "var(--text-faint)" }}>
-              Current asset status: {asset.status}. Current sale status:{" "}
-              {asset.sale_terms?.sale_status ?? "not configured"}.
-            </p>
           </div>
 
           <Link href={`/assets/${asset.id}`} className="btn-outline text-sm">
             <ExternalLink className="w-4 h-4" /> Open public asset page
           </Link>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: "Energy Type", val: energy.label },
-          { label: "Capacity", val: `${formatNumber(asset.capacity_kw)} kW` },
-          {
-            label: "Expected APY",
-            val:
-              asset.expected_annual_yield_percent === null
-                ? "TBD"
-                : `${asset.expected_annual_yield_percent}%`,
-          },
-          { label: "Revenue Epochs", val: String(revenue.length) },
-        ].map((item) => (
-          <div key={item.label} className="card p-4 text-center">
-            <p className="text-lg font-black" style={{ color: "var(--text)" }}>
-              {item.val}
-            </p>
-            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-              {item.label}
-            </p>
-          </div>
-        ))}
       </div>
 
       <div className="card p-6">
@@ -402,21 +932,24 @@ export default function ManageAssetPage() {
         {asset.sale_terms ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
             {[
-              { label: "Valuation", val: formatUSDC(parseFloat(asset.sale_terms.valuation_usdc)) },
-              { label: "Total Shares", val: formatNumber(asset.sale_terms.total_shares) },
+              {
+                label: "Valuation",
+                value: formatUSDC(parseFloat(asset.sale_terms.valuation_usdc)),
+              },
+              { label: "Total Shares", value: formatNumber(asset.sale_terms.total_shares) },
               {
                 label: "Price / Share",
-                val: formatUSDC(parseFloat(asset.sale_terms.price_per_share_usdc)),
+                value: formatUSDC(parseFloat(asset.sale_terms.price_per_share_usdc)),
               },
               {
                 label: "Min. Buy",
-                val: formatUSDC(parseFloat(asset.sale_terms.minimum_buy_amount_usdc)),
+                value: formatUSDC(parseFloat(asset.sale_terms.minimum_buy_amount_usdc)),
               },
               {
                 label: "Target Raise",
-                val: formatUSDC(parseFloat(asset.sale_terms.target_raise_usdc)),
+                value: formatUSDC(parseFloat(asset.sale_terms.target_raise_usdc)),
               },
-              { label: "Sale Status", val: asset.sale_terms.sale_status },
+              { label: "Sale Status", value: asset.sale_terms.sale_status },
             ].map((row) => (
               <div
                 key={row.label}
@@ -425,7 +958,7 @@ export default function ManageAssetPage() {
               >
                 <span style={{ color: "var(--text-muted)" }}>{row.label}</span>
                 <span className="font-medium" style={{ color: "var(--text)" }}>
-                  {row.val}
+                  {row.value}
                 </span>
               </div>
             ))}
@@ -602,7 +1135,7 @@ export default function ManageAssetPage() {
                     Epoch #{item.epoch_number}
                   </p>
                   <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    {item.period_start} – {item.period_end}
+                    {item.period_start} - {item.period_end}
                   </p>
                 </div>
                 <div className="text-right">
@@ -619,49 +1152,240 @@ export default function ManageAssetPage() {
         )}
       </div>
 
-      <div className="card p-6">
-        <h2 className="font-black mb-4" style={{ color: "var(--text)" }}>
-          Documents
-        </h2>
+      <section className="card p-6 space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="label-xs mb-2">Documents</p>
+            <h2 className="text-2xl font-black" style={{ color: "var(--text)" }}>
+              Manage documents
+            </h2>
+          </div>
+        </div>
+
+        <form
+          onSubmit={handleUploadNewDocument}
+          className="rounded-[1.5rem] p-5 space-y-4"
+          style={{ background: "var(--surface-low)" }}
+        >
+          <div className="flex items-center gap-2">
+            <Upload className="w-4 h-4 text-[#9945FF]" />
+            <h3 className="font-semibold text-sm" style={{ color: "var(--text)" }}>
+              Upload new document
+            </h3>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-[1.3fr_0.9fr_auto]">
+            <div>
+              <label htmlFor="new-document-title" className="label-xs block mb-2">
+                Title
+              </label>
+              <input
+                id="new-document-title"
+                value={newDocument.title}
+                onChange={(event) =>
+                  setNewDocument((current) => ({ ...current, title: event.target.value }))
+                }
+                className="input-new text-sm py-3"
+                minLength={3}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="new-document-type" className="label-xs block mb-2">
+                Type
+              </label>
+              <select
+                id="new-document-type"
+                value={newDocument.type}
+                onChange={(event) =>
+                  setNewDocument((current) => ({
+                    ...current,
+                    type: event.target.value as AssetDocument["type"],
+                  }))
+                }
+                className="input-new text-sm py-3"
+              >
+                {DOCUMENT_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>
+                    {type.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <label
+              className="flex items-end gap-2 text-sm font-medium"
+              style={{ color: "var(--text)" }}
+            >
+              <input
+                type="checkbox"
+                checked={newDocument.is_public}
+                onChange={(event) =>
+                  setNewDocument((current) => ({ ...current, is_public: event.target.checked }))
+                }
+              />
+              Public
+            </label>
+          </div>
+
+          <FileDropInput
+            accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/png,image/jpeg,image/jpg"
+            buttonLabel="Attach document"
+            title="Drop the asset document here"
+            selectedLabel={newDocumentFile?.name ?? null}
+            description="Upload legal, technical, photo, or financial support files for this asset."
+            onFilesSelected={(files) => setNewDocumentFile(files[0] ?? null)}
+          />
+
+          <div className="flex justify-end">
+            <button type="submit" disabled={uploadingDocument} className="btn-sol text-sm px-5">
+              {uploadingDocument ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" /> Add document
+                </>
+              )}
+            </button>
+          </div>
+        </form>
 
         {asset.documents.length === 0 ? (
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
             No documents uploaded.
           </p>
         ) : (
-          <div className="space-y-2">
-            {asset.documents.map((document) => (
-              <div
-                key={document.id}
-                className="flex items-center justify-between rounded-2xl border p-3"
-                style={{ borderColor: "var(--border)" }}
-              >
-                <div className="flex items-center gap-3">
-                  <FileText className="w-4 h-4 text-emerald-500" />
+          <div className="space-y-4">
+            {asset.documents.map((document) => {
+              const draft = documentDrafts[document.id];
+
+              if (!draft) {
+                return null;
+              }
+
+              const isSaving = savingDocumentId === document.id;
+
+              return (
+                <div
+                  key={document.id}
+                  className="rounded-[1.5rem] border p-5 space-y-4"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-4 h-4 text-emerald-500" />
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+                          {document.title}
+                        </p>
+                        <p className="text-xs capitalize" style={{ color: "var(--text-muted)" }}>
+                          {document.type.replace(/_/g, " ")} · {document.storage_provider}
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href={document.storage_uri}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-outline text-xs"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> Open
+                    </a>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-[1.2fr_0.8fr_auto]">
+                    <div>
+                      <label className="label-xs block mb-2">Title</label>
+                      <input
+                        value={draft.title}
+                        onChange={(event) =>
+                          updateDocumentDraft(document.id, { title: event.target.value })
+                        }
+                        className="input-new text-sm py-3"
+                        minLength={3}
+                      />
+                    </div>
+                    <div>
+                      <label className="label-xs block mb-2">Type</label>
+                      <select
+                        value={draft.type}
+                        onChange={(event) =>
+                          updateDocumentDraft(document.id, {
+                            type: event.target.value as AssetDocument["type"],
+                          })
+                        }
+                        className="input-new text-sm py-3"
+                      >
+                        {DOCUMENT_TYPE_OPTIONS.map((type) => (
+                          <option key={type} value={type}>
+                            {type.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <label
+                      className="flex items-end gap-2 text-sm font-medium"
+                      style={{ color: "var(--text)" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={draft.is_public}
+                        onChange={(event) =>
+                          updateDocumentDraft(document.id, { is_public: event.target.checked })
+                        }
+                      />
+                      Public
+                    </label>
+                  </div>
+
                   <div>
-                    <p className="text-sm" style={{ color: "var(--text)" }}>
-                      {document.title}
-                    </p>
-                    <p className="text-xs capitalize" style={{ color: "var(--text-muted)" }}>
-                      {document.type.replace(/_/g, " ")} · {document.storage_provider} ·{" "}
-                      {document.is_public ? "public" : "private"}
-                    </p>
+                    <label className="label-xs block mb-2">Replace file</label>
+                    <input
+                      type="file"
+                      onChange={(event) =>
+                        updateDocumentDraft(document.id, {
+                          replacementFile: event.target.files?.[0] ?? null,
+                        })
+                      }
+                      className="block w-full text-sm"
+                      style={{ color: "var(--text-muted)" }}
+                    />
+                    {draft.replacementFile && (
+                      <p className="mt-2 text-xs" style={{ color: "var(--text-faint)" }}>
+                        Pending replacement: {draft.replacementFile.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDocument(document.id)}
+                      disabled={isSaving}
+                      className="btn-outline text-sm border-red-500/30 text-red-400 hover:bg-red-500/10"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveDocument(document.id)}
+                      disabled={isSaving}
+                      className="btn-sol text-sm"
+                    >
+                      {isSaving ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" /> Save document
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
-                <a
-                  href={document.storage_uri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-1.5 rounded-lg hover:bg-white/5"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
